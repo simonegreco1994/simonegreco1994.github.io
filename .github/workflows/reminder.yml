@@ -1,0 +1,97 @@
+name: AgilityPro — Reminder Serale
+
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Leggi lezioni da Firestore e manda notifica OneSignal
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_USER_UID: ${{ secrets.FIREBASE_USER_UID }}
+          GIORNI_ANTICIPO: ${{ secrets.GIORNI_ANTICIPO }}
+        run: |
+          python3 - << 'PYEOF'
+          import urllib.request, json, os
+          from datetime import datetime, timedelta
+
+          ONESIGNAL_APP_ID = os.environ['ONESIGNAL_APP_ID']
+          ONESIGNAL_API_KEY = os.environ['ONESIGNAL_API_KEY']
+          PROJECT_ID = os.environ['FIREBASE_PROJECT_ID']
+          API_KEY = os.environ['FIREBASE_API_KEY']
+          USER_UID = os.environ['FIREBASE_USER_UID']
+          GIORNI = int(os.environ.get('GIORNI_ANTICIPO', '1'))
+
+          target = datetime.utcnow() + timedelta(days=GIORNI)
+          target_str = target.strftime('%Y-%m-%d')
+          mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre']
+          giorni_sett = ['lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica']
+          target_label = giorni_sett[target.weekday()] + ' ' + str(target.day) + ' ' + mesi[target.month-1]
+
+          base = f'https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents'
+
+          def get_docs(path):
+            try:
+              url = f'{base}/{path}?key={API_KEY}&pageSize=200'
+              with urllib.request.urlopen(url, timeout=10) as r:
+                return json.loads(r.read()).get('documents', [])
+            except Exception as e:
+              print(f'Errore {path}: {e}')
+              return []
+
+          def get_field(doc, field):
+            f = doc.get('fields', {}).get(field, {})
+            for t in ['stringValue','integerValue','doubleValue','booleanValue']:
+              if t in f: return f[t]
+            return None
+
+          appuntamenti = get_docs(f'users/{USER_UID}/appuntamenti')
+          iscritti_docs = get_docs(f'users/{USER_UID}/iscritti')
+          iscritti = {str(get_field(d,'id') or d['name'].split('/')[-1]): d for d in iscritti_docs}
+
+          lezioni = [a for a in appuntamenti if get_field(a,'data') == target_str and get_field(a,'stato') != 'saltata']
+          lezioni.sort(key=lambda a: get_field(a,'ora') or '00:00')
+
+          if not lezioni:
+            titolo = 'AgilityPro'
+            corpo = f'Nessuna lezione {target_label}. Giornata libera!'
+          else:
+            n = len(lezioni)
+            titolo = f'AgilityPro - {n} lezione{"i" if n>1 else ""} {target_label}'
+            righe = []
+            for a in lezioni:
+              ora = get_field(a,'ora') or '?'
+              isc = iscritti.get(str(get_field(a,'iscrittoId') or ''))
+              nome = get_field(isc,'nome') if isc else '?'
+              cane = get_field(isc,'cane') if isc else '?'
+              rec = ' (recupero)' if get_field(a,'recuperoDi') else ''
+              righe.append(f'{ora} - {nome} & {cane}{rec}')
+            corpo = '\n'.join(righe)
+
+          print(f'Titolo: {titolo}')
+          print(f'Corpo: {corpo}')
+
+          payload = json.dumps({
+            'app_id': ONESIGNAL_APP_ID,
+            'included_segments': ['All'],
+            'headings': {'it': titolo, 'en': titolo},
+            'contents': {'it': corpo, 'en': corpo},
+            'url': 'https://simonegreco1994.github.io/agilitypro/',
+          }).encode()
+
+          req = urllib.request.Request(
+            'https://api.onesignal.com/notifications',
+            data=payload,
+            headers={'Content-Type': 'application/json', 'Authorization': f'Key {ONESIGNAL_API_KEY}'}
+          )
+          with urllib.request.urlopen(req, timeout=10) as r:
+            result = json.loads(r.read())
+            print(f'Risultato: {result}')
+          PYEOF
