@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgilityPro">
+<meta name="theme-color" content="#0F1117">
+<title>AgilityPro 🐾</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- OneSignal SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "fd01f348-4c6b-42ed-9394-00b8d5e2a635",
+      safari_web_id: "web.onesignal.auto.fd01f348-4c6b-42ed-9394-00b8d5e2a635",
+      notifyButton: { enable: false },
+      allowLocalhostAsSecureOrigin: false,
+      serviceWorkerParam: { scope: '/agilitypro/' },
+      serviceWorkerPath: '/agilitypro/OneSignalSDKWorker.js',
+    });
+    // Salva il Player ID per usarlo con le GitHub Actions
+    OneSignal.User.PushSubscription.addEventListener('change', async (e) => {
+      if(e.current.optedIn) {
+        const id = e.current.id;
+        if(id) {
+          localStorage.setItem('ap_onesignal_player_id', id);
+          console.log('OneSignal Player ID:', id);
+        }
+      }
+    });
+    // Recupera ID se già iscritto
+    const subId = OneSignal.User.PushSubscription.id;
+    if(subId) localStorage.setItem('ap_onesignal_player_id', subId);
+  });
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F1117;
+    --surface: #181C27;
+    --surface2: #1E2333;
+    --border: #2A2F42;
+    --text: #E8EAF0;
+    --sub: #8B91A8;
+    --accent: #5B8AF0;
+    --green: #4CAF82;
+    --orange: #F0A05B;
+    --purple: #B85BF0;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+  .app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: calc(var(--safe-top) + 12px) 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+  }
+  .topbar-logo { display: flex; align-items: center; gap: 8px; }
+  .topbar-icon { font-size: 22px; }
+  .topbar-title { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+  .topbar-sub { font-size: 10px; color: var(--sub); }
+  .topbar-add {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; padding: 8px 14px; font-size: 13px;
+    font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif;
+  }
+
+  /* ── MAIN SCROLL ── */
+  .main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(70px + var(--safe-bottom)); }
+  .page { padding: 16px; }
+
+  /* ── BOTTOM NAV ── */
+  .bottomnav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding-bottom: var(--safe-bottom);
+    z-index: 50;
+    backdrop-filter: blur(16px);
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; padding: 10px 4px; background: none; border: none;
+    color: var(--sub); cursor: pointer; font-family: 'Sora', sans-serif;
+    font-size: 10px; font-weight: 600; transition: color 0.15s;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn .nav-icon { font-size: 20px; }
+
+  /* ── STATS GRID ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card {
+    background: var(--surface); border-radius: 14px; padding: 14px;
+    border-top: 3px solid var(--accent);
+  }
+  .stat-icon { font-size: 22px; margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+  .stat-label { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+  /* ── CARDS ── */
+  .card { background: var(--surface); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .link-btn { background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif; }
+
+  /* ── LIST ITEMS ── */
+  .list-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .list-item:last-child { border-bottom: none; }
+  .item-info { flex: 1; min-width: 0; }
+  .item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { font-size: 11px; color: var(--sub); }
+  .item-time { text-align: right; }
+  .item-date { font-size: 10px; color: var(--sub); }
+  .item-hour { font-size: 14px; font-weight: 800; }
+
+  /* ── BADGE ── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .badge-blue { background: #5B8AF022; color: var(--accent); }
+  .badge-green { background: #4CAF8222; color: var(--green); }
+  .badge-orange { background: #F0A05B22; color: var(--orange); }
+  .badge-purple { background: #B85BF022; color: var(--purple); }
+
+  /* ── ISCRITTI GRID ── */
+  .iscritti-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .iscritto-card {
+    background: var(--surface); border-radius: 14px; padding: 16px;
+    text-align: center; border: 1px solid var(--border); cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .iscritto-card:active { transform: scale(0.97); }
+  .iscritto-avatar { font-size: 36px; margin-bottom: 6px; }
+  .iscritto-nome { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .iscritto-cane { font-size: 12px; color: var(--accent); font-weight: 600; }
+  .iscritto-razza { font-size: 10px; color: var(--sub); margin-bottom: 6px; }
+
+  /* ── SEARCH ── */
+  .search-input {
+    width: 100%; padding: 10px 14px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 14px; margin-bottom: 14px;
+    font-family: 'Sora', sans-serif; outline: none;
+  }
+
+  /* ── DETTAGLIO ── */
+  .back-btn { background: none; border: none; color: var(--accent); font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 16px; padding: 0; font-family: 'Sora', sans-serif; display: flex; align-items: center; gap: 4px; }
+  .detail-hero { text-align: center; margin-bottom: 20px; }
+  .detail-avatar { font-size: 64px; }
+  .detail-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; margin: 6px 0 2px; }
+  .detail-dog { font-size: 14px; color: var(--accent); font-weight: 600; }
+  .info-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .info-label { color: var(--sub); }
+  .info-value { font-weight: 600; text-align: right; max-width: 55%; }
+  .action-row { display: flex; gap: 8px; margin-top: 14px; }
+  .btn-primary { flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; }
+  .btn-secondary { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text); font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; }
+  .btn-danger { flex: 1; padding: 12px; border-radius: 12px; border: none; background: #e74c3c22; color: #e74c3c; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif; font-size: 14px; }
+
+  /* ── TABELLA PAGAMENTI ── */
+  .pag-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .pag-item:last-child { border-bottom: none; }
+  .pag-amount { font-size: 16px; font-weight: 800; color: var(--green); }
+  .pag-meta { font-size: 10px; color: var(--sub); margin-top: 2px; }
+  .check-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; }
+
+  /* ── CALENDARIO ── */
+  .cal-group { margin-bottom: 20px; }
+  .cal-date { font-size: 11px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .cal-card {
+    background: var(--surface); border-radius: 12px; padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
+  }
+  .cal-ora { font-size: 15px; font-weight: 800; min-width: 44px; }
+  .cal-info { flex: 1; }
+  .cal-title { font-size: 13px; font-weight: 700; }
+  .cal-name { font-size: 11px; color: var(--sub); margin-top: 2px; }
+  .cal-note { font-size: 11px; color: var(--sub); margin-top: 4px; font-style: italic; }
+  .cal-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .cal-actions { display: flex; flex-direction: column; gap: 4px; }
+  .icon-btn { background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px; }
+
+  /* ── STATISTICHE ── */
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .bar-label { font-size: 12px; color: var(--sub); min-width: 100px; }
+  .bar-track { flex: 1; height: 7px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.5s; }
+  .bar-count { font-size: 12px; font-weight: 700; min-width: 30px; text-align: right; }
+  .total-box { padding: 14px; background: #4CAF8211; border-radius: 12px; border-left: 3px solid var(--green); margin-top: 14px; }
+  .total-amount { font-size: 26px; font-weight: 800; color: var(--green); }
+  .total-label { font-size: 12px; color: var(--sub); }
+
+  /* ── MODALE ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal-box {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    padding: 20px 20px calc(20px + var(--safe-bottom));
+    width: 100%; max-height: 90vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 18px; }
+  .modal-title { font-size: 17px; font-weight: 800; margin-bottom: 18px; }
+  .form-field { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 5px; display: block; }
+  .form-input {
+    width: 100%; padding: 11px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); font-size: 15px; font-family: 'Sora', sans-serif; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-footer { display: flex; gap: 8px; margin-top: 20px; }
+  .avatar-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .avatar-btn { font-size: 26px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); background: transparent; cursor: pointer; }
+  .avatar-btn.selected { background: #5B8AF033; border-color: var(--accent); }
+  .empty-msg { text-align: center; padding: 30px 20px; color: var(--sub); font-size: 13px; }
+
+  /* ── STATO LEZIONE ── */
+  .cal-card { position: relative; }
+  .cal-card.stato-effettuata { border-left-color: var(--green); opacity: 0.75; }
+  .cal-card.stato-saltata { border-left-color: #e74c3c; }
+  .cal-card.stato-recupero { border-left-color: var(--orange); }
+  .stato-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); font-size: 15px; cursor: pointer;
+  }
+  .stato-btn.active-effettuata { background: #4CAF8233; border-color: var(--green); }
+  .stato-btn.active-saltata { background: #e74c3c33; border-color: #e74c3c; }
+  .recupero-banner {
+    background: #F0A05B18; border: 1px solid #F0A05B55;
+    border-radius: 10px; padding: 8px 12px; margin-top: 6px;
+    font-size: 11px; color: var(--orange); font-weight: 700;
+  }
+
+  /* ── LOGIN ── */
+  .login-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; padding: 32px;
+  }
+  .login-logo { font-size: 64px; margin-bottom: 12px; }
+  .login-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .login-sub { font-size: 13px; color: var(--sub); margin-bottom: 40px; }
+  .login-box { width: 100%; max-width: 320px; }
+  .login-label { font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 8px; display: block; }
+  .login-input {
+    width: 100%; padding: 14px 16px; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 18px; font-family: 'Sora', sans-serif;
+    outline: none; letter-spacing: 3px; text-align: center; margin-bottom: 12px;
+  }
+  .login-input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 14px; border-radius: 14px; border: none;
+    background: var(--accent); color: #fff; font-size: 16px; font-weight: 800;
+    cursor: pointer; font-family: 'Sora', sans-serif; margin-bottom: 12px;
+  }
+  .login-error { color: #e74c3c; font-size: 13px; text-align: center; min-height: 20px; font-weight: 600; }
+
+  /* ── SOLLECITO ALERT ── */
+  .alert-box { background: #F0A05B15; border: 1px solid #F0A05B44; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .alert-title { font-size: 12px; font-weight: 700; color: var(--orange); margin-bottom: 6px; }
+
+  /* ── PAGE TITLE ── */
+  .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .page-sub { font-size: 12px; color: var(--sub); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <span class="topbar-icon">🐾</span>
+      <div>
+        <div class="topbar-title">AgilityPro</div>
+        <div class="topbar-sub">Gestione Cinofila</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="topbar-add" id="addBtn">+ Aggiungi</button>
+      <button onclick="doLogout()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px" title="Esci">🚪</button>
+    </div>
+  </div>
+
+  <div class="main" id="main"></div>
+
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-tab="dashboard">
+      <span class="nav-icon">◈</span>Dashboard
+    </button>
+    <button class="nav-btn" data-tab="iscritti">
+      <span class="nav-icon">◉</span>Iscritti
+    </button>
+    <button class="nav-btn" data-tab="pagamenti">
+      <span class="nav-icon">€</span>Pagamenti
+    </button>
+    <button class="nav-btn" data-tab="calendario">
+      <span class="nav-icon">◷</span>Lezioni
+    </button>
+    <button class="nav-btn" data-tab="statistiche">
+      <span class="nav-icon">▦</span>Statistiche
+    </button>
+    <button class="nav-btn" data-tab="impostazioni">
+      <span class="nav-icon">⚙</span>Imposta
+    </button>
+  </nav>
+</div>
+
+<!-- AUTH SCREEN -->
+<div class="login-screen" id="authScreen" style="display:flex">
+  <div class="login-logo">🐾</div>
+  <div class="login-title">AgilityPro</div>
+  <div class="login-sub" id="authSub">Accedi o crea il tuo account</div>
+
+  <div class="login-box" id="authBox">
+    <!-- TAB toggle -->
+    <div style="display:flex;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:20px">
+      <button id="tabLogin" onclick="setAuthTab('login')" style="flex:1;padding:8px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:Sora,sans-serif">Accedi</button>
+      <button id="tabRegister" onclick="setAuthTab('register')" style="flex:1;padding:8px;border:none;border-radius:9px;background:transparent;color:var(--sub);font-weight:700;font-size:13px;cursor:pointer;font-family:Sora,sans-serif">Registrati</button>
+    </div>
+
+    <!-- Nome (solo registrazione) -->
+    <div id="fieldNome" style="display:none;margin-bottom:12px">
+      <label class="login-label">NOME</label>
+      <input class="login-input" type="text" id="authNome" placeholder="Il tuo nome" autocomplete="name" style="letter-spacing:0;text-align:left;font-size:15px">
+    </div>
+
+    <label class="login-label">EMAIL</label>
+    <input class="login-input" type="email" id="authEmail" placeholder="email@esempio.it" autocomplete="email" style="letter-spacing:0;text-align:left;font-size:15px;margin-bottom:12px">
+
+    <label class="login-label">PASSWORD</label>
+    <input class="login-input" type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" style="margin-bottom:16px">
+
+    <button class="login-btn" id="authBtn" onclick="doAuth()">Accedi</button>
+    <div class="login-error" id="authError"></div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal-box" id="modalBox">
+    <div class="modal-handle"></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script type="module">
+// ── FIREBASE IMPORTS ───────────────────────────────────────────────────────
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCViGq1NNhhFCG59wKXHJHgjg2vtXZbGJo",
+  authDomain: "agilitypro-a1df2.firebaseapp.com",
+  projectId: "agilitypro-a1df2",
+  storageBucket: "agilitypro-a1df2.firebasestorage.app",
+  messagingSenderId: "50842508342",
+  appId: "1:50842508342:web:72dc8c23a53beed4968c97"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+
+// ── AUTH UI ────────────────────────────────────────────────────────────────
+let authTab = 'login';
+
+window.setAuthTab = (tab) => {
+  authTab = tab;
+  const isReg = tab === 'register';
+  document.getElementById('fieldNome').style.display = isReg ? 'block' : 'none';
+  document.getElementById('authBtn').textContent = isReg ? 'Crea account' : 'Accedi';
+  document.getElementById('authSub').textContent = isReg ? 'Crea il tuo account gratuito' : 'Accedi al tuo account';
+  document.getElementById('tabLogin').style.background = isReg ? 'transparent' : 'var(--accent)';
+  document.getElementById('tabLogin').style.color = isReg ? 'var(--sub)' : '#fff';
+  document.getElementById('tabRegister').style.background = isReg ? 'var(--accent)' : 'transparent';
+  document.getElementById('tabRegister').style.color = isReg ? '#fff' : 'var(--sub)';
+  document.getElementById('authError').textContent = '';
+};
+
+const setAuthError = (msg) => {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 4000);
+};
+
+const authErrMsg = (code) => {
+  const map = {
+    'auth/email-already-in-use': '❌ Email già registrata.',
+    'auth/invalid-email': '❌ Email non valida.',
+    'auth/weak-password': '❌ Password troppo corta (min 6 caratteri).',
+    'auth/user-not-found': '❌ Account non trovato.',
+    'auth/wrong-password': '❌ Password errata.',
+    'auth/invalid-credential': '❌ Email o password errati.',
+    'auth/popup-closed-by-user': '❌ Accesso con Google annullato.',
+  };
+  return map[code] || '❌ Errore: ' + code;
+};
+
+window.doAuth = async () => {
+  const email = (document.getElementById('authEmail')?.value || '').trim();
+  const password = document.getElementById('authPassword')?.value || '';
+  const nome = (document.getElementById('authNome')?.value || '').trim();
+  const btn = document.getElementById('authBtn');
+  if(!email || !password) { setAuthError('❌ Inserisci email e password.'); return; }
+  btn.textContent = '⏳ Attendere...';
+  btn.disabled = true;
+  try {
+    if (authTab === 'register') {
+      if (!nome) { setAuthError('❌ Inserisci il tuo nome.'); btn.textContent = 'Crea account'; btn.disabled = false; return; }
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: nome });
+    } else {
+      await signInWithEmailAndPassword(auth, email, password);
+    }
+  } catch(e) {
+    console.error('Auth error:', e.code, e.message);
+    setAuthError(authErrMsg(e.code));
+    btn.textContent = authTab === 'register' ? 'Crea account' : 'Accedi';
+    btn.disabled = false;
+  }
+};
+
+
+
+window.doLogout = async () => {
+  if(confirm('Vuoi uscire?')) {
+    state.loaded = false;
+    state.iscritti = []; state.pagamenti = []; state.appuntamenti = [];
+    if(unsubscribers.length) { unsubscribers.forEach(u=>u()); unsubscribers.length=0; }
+    await signOut(auth);
+  }
+};
+
+// Enter key on auth inputs — bind after a small delay to ensure DOM is ready
+setTimeout(() => {
+  ['authEmail','authPassword','authNome'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') window.doAuth(); });
+  });
+}, 500);
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let state = {
+  tab: 'dashboard',
+  dettaglio: null,
+  search: '',
+  iscritti: [],
+  pagamenti: [],
+  appuntamenti: [],
+  loaded: false,
+  user: null,
+};
+
+let unsubscribers = [];
+
+// ── FIRESTORE (per-user paths) ─────────────────────────────────────────────
+const userCol = (colName) => collection(db, 'users', state.user.uid, colName);
+
+const saveDoc = async (colName, obj) => {
+  try {
+    const d = { ...obj }; delete d.id;
+    await setDoc(doc(db, 'users', state.user.uid, colName, String(obj.id)), d);
+  } catch(e) { console.error('saveDoc error:', e); }
+};
+
+const deleteDocument = async (colName, id) => {
+  try { await deleteDoc(doc(db, 'users', state.user.uid, colName, String(id))); }
+  catch(e) { console.error('deleteDoc error:', e); }
+};
+
+const initFirebase = () => {
+  let loadedCount = 0;
+  const checkLoaded = () => { loadedCount++; if(loadedCount >= 3) { state.loaded = true; render(); } };
+
+  unsubscribers.push(onSnapshot(userCol('iscritti'), snap => {
+    state.iscritti = snap.docs.map(d => ({ id: Number(d.id), ...d.data() }));
+    if(!state.loaded) checkLoaded(); else render();
+  }));
+  unsubscribers.push(onSnapshot(userCol('pagamenti'), snap => {
+    state.pagamenti = snap.docs.map(d => ({ id: Number(d.id), ...d.data() }));
+    if(!state.loaded) checkLoaded(); else render();
+  }));
+  unsubscribers.push(onSnapshot(userCol('appuntamenti'), snap => {
+    state.appuntamenti = snap.docs.map(d => ({ id: Number(d.id), ...d.data() }));
+    if(!state.loaded) checkLoaded(); else render();
+  }));
+};
+
+const save = () => {};
+
+// ── AUTH STATE OBSERVER ────────────────────────────────────────────────────
+onAuthStateChanged(auth, (user) => {
+  const authScreen = document.getElementById('authScreen');
+  if (user) {
+    state.user = user;
+    if(authScreen) authScreen.style.display = 'none';
+    showLoading();
+    initFirebase();
+  } else {
+    state.user = null;
+    state.loaded = false;
+    if(authScreen) authScreen.style.display = 'flex';
+  }
+});
+
+const showLoading = () => {
+  document.getElementById('main').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px">
+      <div style="font-size:48px">🐾</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Caricamento dati...</div>
+      <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+};
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+const today = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
+const getIscritto = id => state.iscritti.find(i => i.id === id);
+const totIncassato = () => state.pagamenti.filter(p=>p.stato==='Pagato').reduce((s,p)=>s+p.importo,0);
+const totAttesa = () => state.pagamenti.filter(p=>p.stato==='In attesa').reduce((s,p)=>s+p.importo,0);
+const livelloColor = l => l==='Avanzato' ? 'badge-blue' : l==='Intermedio' ? 'badge-orange' : 'badge-green';
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render() {
+  if(!state.loaded) return;
+  const main = document.getElementById('main');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+
+  const addBtn = document.getElementById('addBtn');
+  const labels = { dashboard:'', iscritti:'+ Iscritto', pagamenti:'+ Pagamento', calendario:'+ Lezione', statistiche:'', impostazioni:'' };
+  addBtn.textContent = labels[state.tab] || '+ Aggiungi';
+  addBtn.style.display = (state.tab === 'statistiche' || state.tab === 'dashboard' || state.tab === 'impostazioni') ? 'none' : '';
+
+  if (state.tab === 'dashboard') { main.innerHTML = renderDashboard(); }
+  else if (state.tab === 'iscritti') { main.innerHTML = state.dettaglio ? renderDettaglio() : renderIscritti(); }
+  else if (state.tab === 'pagamenti') { main.innerHTML = renderPagamenti(); }
+  else if (state.tab === 'calendario') { main.innerHTML = renderCalendario(); }
+  else if (state.tab === 'statistiche') { main.innerHTML = renderStatistiche(); }
+  else if (state.tab === 'impostazioni') { main.innerHTML = renderImpostazioni(); bindImpostazioniEvents(); }
+
+  bindEvents();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const appOggi = state.appuntamenti.filter(a=>a.data===today() && a.stato!=='saltata').sort((a,b)=>a.ora.localeCompare(b.ora));
+  const appProssimi = state.appuntamenti.filter(a=>a.data>today() && a.stato!=='saltata').sort((a,b)=>a.data.localeCompare(b.data)||a.ora.localeCompare(b.ora));
+  const inAttesaList = state.pagamenti.filter(p=>p.stato==='In attesa');
+  const sollecitare = state.iscritti.filter(i => !state.pagamenti.some(p=>p.iscrittoId===i.id && p.data.startsWith(new Date().toISOString().slice(0,7))));
+
+  // Helper WhatsApp lezione
+  const waBtnLez = a => {
+    const i = getIscritto(a.iscrittoId);
+    if(!i?.telefono) return '';
+    return `<button class="icon-btn" data-wa-lez="${a.id}" style="color:#25D366;font-size:18px">💬</button>`;
+  };
+
+  const statCards = [
+    { l:'Iscritti', v:state.iscritti.length, icon:'🐕', c:'var(--accent)', bt:'var(--accent)' },
+    { l:'Incassato', v:'€'+totIncassato(), icon:'💰', c:'var(--green)', bt:'var(--green)' },
+    { l:'In Attesa', v:'€'+totAttesa(), icon:'⏳', c:'var(--orange)', bt:'var(--orange)' },
+    { l:'Oggi', v:appOggi.length + ' lezioni', icon:'📅', c:'var(--purple)', bt:'var(--purple)' },
+  ];
+
+  return `<div class="page">
+    <div class="page-title">Ciao, ${state.user?.displayName?.split(' ')[0] || 'Allenatore'}! 👋</div>
+    <div class="page-sub">${new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</div>
+    <div class="stats-grid">
+      ${statCards.map(s=>`<div class="stat-card" style="border-top-color:${s.bt}">
+        <div class="stat-icon">${s.icon}</div>
+        <div class="stat-value" style="color:${s.c}">${s.v}</div>
+        <div class="stat-label">${s.l}</div>
+      </div>`).join('')}
+    </div>
+
+    ${appOggi.length > 0 ? `<div class="card">
+      <div class="card-header">
+        <span class="card-title">🟢 Lezioni di Oggi</span>
+        <button class="link-btn" data-goto="calendario">Calendario →</button>
+      </div>
+      ${appOggi.map(a=>{const i=getIscritto(a.iscrittoId); return `
+        <div class="list-item">
+          <div class="item-time"><div class="item-date" style="color:var(--green);font-weight:800">Oggi</div><div class="item-hour">${a.ora}</div></div>
+          <div class="item-info">
+            <div class="item-title">${a.titolo}${a.recuperoDi?' 🔄':''}</div>
+            <div class="item-sub">${i?.nome} & ${i?.cane}</div>
+          </div>
+          <span class="badge ${a.tipo==='Individuale'?'badge-purple':'badge-green'}">${a.tipo}</span>
+          ${waBtnLez(a)}
+        </div>`}).join('')}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📅 Prossime Lezioni</span>
+        <button class="link-btn" data-goto="calendario">Vedi tutte →</button>
+      </div>
+      ${appProssimi.slice(0,7).map(a=>{const i=getIscritto(a.iscrittoId); return `
+        <div class="list-item">
+          <div class="item-time"><div class="item-date">${fmtDate(a.data)}</div><div class="item-hour">${a.ora}</div></div>
+          <div class="item-info">
+            <div class="item-title">${a.titolo}${a.recuperoDi?' 🔄':''}</div>
+            <div class="item-sub">${i?.nome} & ${i?.cane}</div>
+          </div>
+          <span class="badge ${a.tipo==='Individuale'?'badge-purple':'badge-green'}">${a.tipo}</span>
+          ${waBtnLez(a)}
+        </div>`}).join('') || '<div class="empty-msg">Nessuna lezione programmata</div>'}
+    </div>
+
+    ${inAttesaList.length > 0 ? `<div class="card">
+      <div class="card-header"><span class="card-title">⏳ Pagamenti In Attesa</span><button class="link-btn" data-goto="pagamenti">Vedi tutti →</button></div>
+      ${inAttesaList.map(p=>{const i=getIscritto(p.iscrittoId); return `
+        <div class="pag-item">
+          <div class="item-info"><div class="item-title">${i?.nome}</div><div class="pag-meta">${p.tipo} — ${fmtDate(p.data)}</div></div>
+          <span class="pag-amount">€${p.importo}</span>
+          <button class="check-btn" data-pag-confirm="${p.id}">✅</button>
+        </div>`}).join('')}
+    </div>` : ''}
+
+    ${sollecitare.length > 0 ? `<div class="alert-box">
+      <div class="alert-title">🔔 Da sollecitare questo mese</div>
+      ${sollecitare.map(i=>`<div class="list-item" style="padding:6px 0">
+        <span style="font-size:20px">${i.avatar}</span>
+        <div class="item-info"><div class="item-title">${i.nome}</div><div class="item-sub">${i.cane} — ${i.livello}</div></div>
+        <button class="icon-btn" data-wa-pag="${i.id}" title="Sollecita pagamento" style="color:#25D366;font-size:20px">💬</button>
+      </div>`).join('')}
+    </div>` : '<div class="card" style="text-align:center;color:var(--green);font-size:13px;font-weight:700">✅ Tutti aggiornati con i pagamenti!</div>'}
+
+    ${(()=>{
+      const recuperiPendenti = state.appuntamenti.filter(a=>a.recuperoDi && !a.stato).sort((a,b)=>a.data.localeCompare(b.data));
+      const saltateNoRecupero = state.appuntamenti.filter(a=>a.stato==='saltata' && !state.appuntamenti.some(r=>r.recuperoDi===a.data && r.iscrittoId===a.iscrittoId));
+      if(recuperiPendenti.length===0 && saltateNoRecupero.length===0) return '';
+      return `<div class="alert-box" style="border-color:#F0A05B88">
+        <div class="alert-title" style="color:var(--orange)">🔄 Recuperi da gestire</div>
+        ${saltateNoRecupero.map(a=>{const i=getIscritto(a.iscrittoId); return `
+          <div class="list-item" style="padding:6px 0">
+            <span style="font-size:20px">${i?.avatar||'🐕'}</span>
+            <div class="item-info">
+              <div class="item-title">${i?.nome}</div>
+              <div class="item-sub">Saltata il ${fmtDate(a.data)} — recupero da pianificare</div>
+            </div>
+            <button class="link-btn" data-goto="calendario">→</button>
+          </div>`}).join('')}
+        ${recuperiPendenti.map(a=>{const i=getIscritto(a.iscrittoId); return `
+          <div class="list-item" style="padding:6px 0">
+            <span style="font-size:20px">${i?.avatar||'🐕'}</span>
+            <div class="item-info">
+              <div class="item-title">${i?.nome} — Recupero</div>
+              <div class="item-sub">${fmtDate(a.data)} alle ${a.ora}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="badge badge-orange">🔄</span>
+              ${(()=>{const tel=(i?.telefono||'').replace(/\D/g,''); if(!tel) return ''; return `<button class="icon-btn" data-wa-lez="${a.id}" style="color:#25D366;font-size:18px">💬</button>`;})()}
+            </div>
+          </div>`}).join('')}
+      </div>`;
+    })()}
+  </div>`;
+}
+
+// ── ISCRITTI ──────────────────────────────────────────────────────────────
+function renderIscritti() {
+  const filtered = state.iscritti.filter(i =>
+    i.nome.toLowerCase().includes(state.search.toLowerCase()) ||
+    i.cane.toLowerCase().includes(state.search.toLowerCase())
+  );
+  return `<div class="page">
+    <div class="page-title">Iscritti</div>
+    <div class="page-sub">${state.iscritti.length} coppie registrate</div>
+    <input class="search-input" id="searchInput" placeholder="🔍 Cerca nome o cane..." value="${state.search}">
+    <div class="iscritti-grid">
+      ${filtered.map(i=>`<div class="iscritto-card" data-detail="${i.id}">
+        <div class="iscritto-avatar">${i.avatar}</div>
+        <div class="iscritto-nome">${i.nome}</div>
+        <div class="iscritto-cane">🦴 ${i.cane}</div>
+        <div class="iscritto-razza">${i.razza}</div>
+        <span class="badge ${livelloColor(i.livello)}" style="margin-top:4px">${i.livello}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── DETTAGLIO ──────────────────────────────────────────────────────────────
+function renderDettaglio() {
+  const i = state.dettaglio;
+  const miei_pag = state.pagamenti.filter(p=>p.iscrittoId===i.id).sort((a,b)=>b.data.localeCompare(a.data));
+  const mie_lez = state.appuntamenti.filter(a=>a.iscrittoId===i.id).sort((a,b)=>b.data.localeCompare(a.data));
+  return `<div class="page">
+    <button class="back-btn" id="backBtn">← Iscritti</button>
+    <div class="detail-hero">
+      <div class="detail-avatar">${i.avatar}</div>
+      <div class="detail-name">${i.nome}</div>
+      <div class="detail-dog">${i.cane} · ${i.razza}</div>
+      <span class="badge ${livelloColor(i.livello)}" style="margin-top:6px">${i.livello}</span>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Contatti</div>
+      ${[['📞',i.telefono],['📧',i.email],['🪪',i.tessera||'—'],['📅','Dal '+fmtDate(i.dataIscrizione)],['📝',i.note||'—']].map(([k,v])=>`
+        <div class="info-row"><span class="info-label">${k}</span><span class="info-value">${v}</span></div>`).join('')}
+      <div class="action-row">
+        <button class="btn-secondary" data-edit-iscritto="${i.id}">✏️ Modifica</button>
+        <button class="btn-danger" data-del-iscritto="${i.id}">🗑️</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">💰 Pagamenti</span>
+        <button class="link-btn" data-new-pag="${i.id}">+ Aggiungi</button>
+      </div>
+      ${miei_pag.length===0?'<div class="empty-msg">Nessun pagamento</div>':miei_pag.map(p=>`
+        <div class="pag-item">
+          <div class="item-info"><div class="item-title">${p.tipo}</div><div class="pag-meta">${fmtDate(p.data)} · ${p.metodo}</div></div>
+          <span class="pag-amount">€${p.importo}</span>
+          <span class="badge ${p.stato==='Pagato'?'badge-green':'badge-orange'}">${p.stato}</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📅 Lezioni</span>
+        <button class="link-btn" data-new-lez="${i.id}">+ Aggiungi</button>
+      </div>
+      ${(()=>{
+        const saltate = mie_lez.filter(a=>a.stato==='saltata').length;
+        const recuperi = mie_lez.filter(a=>a.recuperoDi).length;
+        const effettuate = mie_lez.filter(a=>a.stato==='effettuata').length;
+        return saltate>0||recuperi>0 ? `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="badge badge-green">✅ ${effettuate} effettuate</span>
+          <span class="badge" style="background:#e74c3c22;color:#e74c3c">❌ ${saltate} saltate</span>
+          <span class="badge badge-orange">🔄 ${recuperi} recuperi</span>
+        </div>` : '';
+      })()}
+      ${mie_lez.length===0?'<div class="empty-msg">Nessuna lezione</div>':mie_lez.map(a=>`
+        <div class="list-item">
+          <div class="item-time"><div class="item-date">${fmtDate(a.data)}</div><div class="item-hour">${a.ora}</div></div>
+          <div class="item-info">
+            <div class="item-title">${a.titolo}${a.recuperoDi?' 🔄':''}</div>
+            <div class="item-sub">${a.note||''}${a.recuperoDi?' · Recupero del '+fmtDate(a.recuperoDi):''}</div>
+          </div>
+          ${a.stato==='effettuata'?'<span class="badge badge-green">✅</span>':
+            a.stato==='saltata'?'<span class="badge" style="background:#e74c3c22;color:#e74c3c">❌</span>':
+            a.recuperoDi?'<span class="badge badge-orange">🔄</span>':
+            '<span class="badge badge-blue">'+a.durata+'m</span>'}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── PAGAMENTI ──────────────────────────────────────────────────────────────
+function renderPagamenti() {
+  const sorted = [...state.pagamenti].sort((a,b)=>b.data.localeCompare(a.data));
+  return `<div class="page">
+    <div class="page-title">Pagamenti</div>
+    <div class="page-sub">Incassato: <strong style="color:var(--green)">€${totIncassato()}</strong> · In attesa: <strong style="color:var(--orange)">€${totAttesa()}</strong></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      ${sorted.map(p=>{const i=getIscritto(p.iscrittoId); return `
+        <div class="pag-item" style="padding:12px 16px">
+          <div class="item-info">
+            <div class="item-title">${i?.nome}</div>
+            <div class="pag-meta">${p.tipo} · ${fmtDate(p.data)} · ${p.metodo}</div>
+          </div>
+          <span class="pag-amount">€${p.importo}</span>
+          <span class="badge ${p.stato==='Pagato'?'badge-green':'badge-orange'}">${p.stato}</span>
+          ${p.stato==='In attesa'?`<button class="check-btn" data-pag-confirm="${p.id}">✅</button>`:''}
+          <button class="icon-btn" data-edit-pag="${p.id}">✏️</button>
+        </div>`}).join('')}
+    </div>
+  </div>`;
+}
+
+// ── CALENDARIO ──────────────────────────────────────────────────────────────
+function statoClass(a) {
+  if(a.stato==='effettuata') return 'stato-effettuata';
+  if(a.stato==='saltata') return 'stato-saltata';
+  if(a.recuperoDi) return 'stato-recupero';
+  return '';
+}
+function statoLabel(a) {
+  if(a.stato==='effettuata') return '<span class="badge badge-green">✅ Effettuata</span>';
+  if(a.stato==='saltata') return '<span class="badge" style="background:#e74c3c22;color:#e74c3c">❌ Saltata</span>';
+  if(a.recuperoDi) return '<span class="badge badge-orange">🔄 Recupero</span>';
+  return '';
+}
+
+function renderCalendario() {
+  const filterStato = state.calFiltro || 'tutti';
+  const filterGiorno = state.calGiorno || '';
+  const filterMese = state.calMese || '';
+
+  const filtered = state.appuntamenti.filter(a => {
+    if(filterStato === 'recuperi') { if(!a.recuperoDi) return false; }
+    else if(filterStato === 'effettuate') { if(a.stato !== 'effettuata') return false; }
+    else if(filterStato === 'saltate') { if(a.stato !== 'saltata') return false; }
+    else if(filterStato === 'programmate') { if(a.stato || a.recuperoDi) return false; }
+    if(filterGiorno && a.data !== filterGiorno) return false;
+    if(filterMese && !a.data.startsWith(filterMese)) return false;
+    return true;
+  });
+  const sorted = [...filtered].sort((a,b)=>a.data.localeCompare(b.data)||a.ora.localeCompare(b.ora));
+  const byDate = sorted.reduce((acc,a)=>{(acc[a.data]=acc[a.data]||[]).push(a);return acc;},{});
+  const nRecuperi = state.appuntamenti.filter(a=>a.recuperoDi).length;
+  const nSaltate = state.appuntamenti.filter(a=>a.stato==='saltata').length;
+  const mesi = [...new Set(state.appuntamenti.map(a=>a.data.slice(0,7)))].sort().reverse();
+
+  return `<div class="page">
+    <div class="page-title">Calendario Lezioni</div>
+    <div class="page-sub">${filtered.length} di ${state.appuntamenti.length} appuntamenti · <span style="color:var(--orange)">${nRecuperi} recuperi</span> · <span style="color:#e74c3c">${nSaltate} saltate</span></div>
+
+    <div class="card" style="padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">📅 Filtra per data</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="date" class="form-input" style="flex:1;min-width:130px;padding:8px 10px;font-size:13px" value="${filterGiorno}"
+          onchange="state.calGiorno=this.value;state.calMese='';render()">
+        <select class="form-input" style="flex:1;min-width:120px;padding:8px 10px;font-size:13px"
+          onchange="state.calMese=this.value;state.calGiorno='';render()">
+          <option value="">Tutti i mesi</option>
+          ${mesi.map(m=>{const [y,mo]=m.split('-');const label=new Date(y,Number(mo)-1).toLocaleDateString('it-IT',{month:'long',year:'numeric'}); return `<option value="${m}" ${filterMese===m?'selected':''}>${label}</option>`;}).join('')}
+        </select>
+        ${filterGiorno||filterMese?`<button type="button" onclick="state.calGiorno='';state.calMese='';render()"
+          style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:12px;cursor:pointer;font-family:Sora,sans-serif">✕ Reset</button>`:''}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      ${[['tutti','Tutte'],['programmate','Programmate'],['effettuate','✅ Effettuate'],['saltate','❌ Saltate'],['recuperi','🔄 Recuperi']].map(([v,l])=>`
+        <button style="padding:6px 12px;border-radius:20px;border:1px solid ${filterStato===v?'var(--accent)':'var(--border)'};background:${filterStato===v?'#5B8AF022':'transparent'};color:${filterStato===v?'var(--accent)':'var(--sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:Sora,sans-serif"
+          data-cal-filtro="${v}">${l}</button>`).join('')}
+    </div>
+    ${Object.entries(byDate).map(([data,apps])=>`
+      <div class="cal-group">
+        <div class="cal-date">${data===today()?'🟢 Oggi — ':''}${fmtDate(data)}</div>
+        ${apps.map(a=>{const i=getIscritto(a.iscrittoId); return `
+          <div class="cal-card ${statoClass(a)}">
+            <div class="cal-ora">${a.ora}</div>
+            <div class="cal-info">
+              <div class="cal-title">${a.titolo}</div>
+              <div class="cal-name">${i?.nome} · ${i?.cane}</div>
+              ${a.note?`<div class="cal-note">${a.note}</div>`:''}
+              <div class="cal-badges" style="margin-top:6px">
+                <span class="badge badge-blue">${a.durata} min</span>
+                <span class="badge ${a.tipo==='Individuale'?'badge-purple':'badge-green'}">${a.tipo}</span>
+                ${statoLabel(a)}
+                ${a.recuperoDi ? `<span class="badge badge-orange" style="font-size:10px">recupero del ${fmtDate(a.recuperoDi)}</span>` : ''}
+              </div>
+            </div>
+            <div class="cal-actions">
+              ${!a.stato ? `
+                <button class="stato-btn" data-segna-effettuata="${a.id}" title="Segna effettuata">✅</button>
+                <button class="stato-btn" data-segna-saltata="${a.id}" title="${a.recuperoDi?'Recupero saltato — crea nuovo recupero':'Segna saltata — crea recupero'}">❌</button>` : ''}
+              ${a.stato==='effettuata' ? `<button class="stato-btn active-effettuata" data-reset-stato="${a.id}" title="Rimuovi stato">✅</button>` : ''}
+              ${a.stato==='saltata' ? `<button class="stato-btn active-saltata" data-reset-stato="${a.id}" title="Rimuovi stato">❌</button>` : ''}
+              <button class="icon-btn" data-wa-lez="${a.id}" style="color:#25D366">💬</button>
+              <button class="icon-btn" data-edit-lez="${a.id}">✏️</button>
+              <button class="icon-btn" data-del-lez="${a.id}" style="color:#e74c3c">🗑️</button>
+            </div>
+          </div>`}).join('')}
+      </div>`).join('') || '<div class="empty-msg">Nessuna lezione in questa categoria</div>'}
+  </div>`;
+}
+
+// ── STATISTICHE ──────────────────────────────────────────────────────────────
+function renderStatistiche() {
+  const tot = state.iscritti.length || 1;
+  const razze = state.iscritti.reduce((acc,i)=>{acc[i.razza]=(acc[i.razza]||0)+1;return acc;},{});
+  const tipiPag = state.pagamenti.filter(p=>p.stato==='Pagato').reduce((acc,p)=>{acc[p.tipo]=(acc[p.tipo]||0)+p.importo;return acc;},{});
+  const totInc = totIncassato() || 1;
+
+  return `<div class="page">
+    <div class="page-title">Statistiche</div>
+    <div class="page-sub">Panoramica del tuo centro</div>
+    <div class="stats-grid">
+      ${[['🌱','Principianti',state.iscritti.filter(i=>i.livello==='Principiante').length,'var(--green)'],
+         ['⭐','Intermedi',state.iscritti.filter(i=>i.livello==='Intermedio').length,'var(--orange)'],
+         ['🏆','Avanzati',state.iscritti.filter(i=>i.livello==='Avanzato').length,'var(--accent)'],
+         ['📅','Lezioni tot.',state.appuntamenti.length,'var(--purple)']
+        ].map(([ic,l,v,c])=>`<div class="stat-card" style="border-top-color:${c}">
+          <div class="stat-icon">${ic}</div>
+          <div class="stat-value" style="color:${c}">${v}</div>
+          <div class="stat-label">${l}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">🐕 Razze più presenti</div>
+      ${Object.entries(razze).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`
+        <div class="bar-row">
+          <div class="bar-label">${r}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(c/tot)*100}%"></div></div>
+          <div class="bar-count">${c}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">💰 Incassi per tipo</div>
+      ${Object.entries(tipiPag).map(([t,v])=>`
+        <div class="bar-row">
+          <div class="bar-label">${t}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(v/totInc)*100}%;background:var(--green)"></div></div>
+          <div class="bar-count">€${v}</div>
+        </div>`).join('') || '<div class="empty-msg">Nessun incasso registrato</div>'}
+      <div class="total-box">
+        <div class="total-amount">€${totIncassato()}</div>
+        <div class="total-label">Totale incassato</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 Lezioni per tipo</div>
+      ${['Individuale','Gruppo'].map(t=>{const c=state.appuntamenti.filter(a=>a.tipo===t).length; return `
+        <div class="bar-row">
+          <div class="bar-label">${t}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(c/(state.appuntamenti.length||1))*100}%;background:var(--purple)"></div></div>
+          <div class="bar-count">${c}</div>
+        </div>`}).join('')}
+    </div>
+  </div>`;
+}
+
+// ── MODALI ──────────────────────────────────────────────────────────────────
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('modal').onclick = e => { if(e.target===document.getElementById('modal')) closeModal(); };
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function modalIscritto(dati={}) {
+  const avs = ['🐕','🐶','🦮','🐕‍🦺','🐩'];
+  showModal(`
+    <div class="modal-title">${dati.id?'✏️ Modifica Iscritto':'➕ Nuovo Iscritto'}</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Nome e Cognome</label><input class="form-input" id="f_nome" value="${dati.nome||''}"></div>
+      <div class="form-field"><label class="form-label">Nome Cane</label><input class="form-input" id="f_cane" value="${dati.cane||''}"></div>
+      <div class="form-field"><label class="form-label">Razza</label><input class="form-input" id="f_razza" value="${dati.razza||''}"></div>
+      <div class="form-field"><label class="form-label">N° Tessera</label><input class="form-input" id="f_tessera" value="${dati.tessera||''}"></div>
+      <div class="form-field"><label class="form-label">Livello</label>
+        <select class="form-input" id="f_livello">
+          ${['Principiante','Intermedio','Avanzato'].map(l=>`<option ${(dati.livello||'Principiante')===l?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Telefono</label><input class="form-input" id="f_telefono" value="${dati.telefono||''}" type="tel"></div>
+      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="f_email" value="${dati.email||''}" type="email"></div>
+    </div>
+    <div class="form-field"><label class="form-label">Avatar</label>
+      <div class="avatar-row">${avs.map(a=>`<button class="avatar-btn ${(dati.avatar||'🐕')===a?'selected':''}" onclick="selectAvatar(this,'${a}')">${a}</button>`).join('')}</div>
+    </div>
+    <div class="form-field"><label class="form-label">Note</label><textarea class="form-input" id="f_note" rows="3">${dati.note||''}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" type="button" onclick="closeModal()">Annulla</button>
+      <button class="btn-primary" type="button" onclick="salvaIscritto(${dati.id||0})">Salva</button>
+    </div>
+  `);
+  window._selAvatar = dati.avatar || '🐕';
+}
+window.selectAvatar = (btn, av) => {
+  document.querySelectorAll('.avatar-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected'); window._selAvatar = av;
+};
+window.salvaIscritto = async id => {
+  const d = {
+    id: id||Date.now(), nome:document.getElementById('f_nome').value, cane:document.getElementById('f_cane').value,
+    razza:document.getElementById('f_razza').value, tessera:document.getElementById('f_tessera').value,
+    livello:document.getElementById('f_livello').value,
+    telefono:document.getElementById('f_telefono').value, email:document.getElementById('f_email').value,
+    note:document.getElementById('f_note').value, avatar:window._selAvatar,
+    dataIscrizione: id ? state.iscritti.find(i=>i.id===id)?.dataIscrizione : today()
+  };
+  await saveDoc('iscritti', d);
+  if(state.dettaglio?.id===id) state.dettaglio=d;
+  closeModal();
+};
+
+function modalPagamento(dati={}) {
+  showModal(`
+    <div class="modal-title">${dati.id?'✏️ Modifica Pagamento':'➕ Nuovo Pagamento'}</div>
+    <div class="form-field"><label class="form-label">Iscritto</label>
+      <select class="form-input" id="f_iscrittoId">
+        <option value="">Seleziona...</option>
+        ${state.iscritti.map(i=>`<option value="${i.id}" ${dati.iscrittoId===i.id?'selected':''}>${i.nome} — ${i.cane}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Importo €</label><input class="form-input" id="f_importo" type="number" value="${dati.importo||80}"></div>
+      <div class="form-field"><label class="form-label">Data</label><input class="form-input" id="f_data" type="date" value="${dati.data||today()}"></div>
+      <div class="form-field"><label class="form-label">Tipo</label>
+        <select class="form-input" id="f_tipo">
+          ${['Mensile','Trimestrale','Annuale','Singola lezione'].map(t=>`<option ${(dati.tipo||'Mensile')===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Metodo</label>
+        <select class="form-input" id="f_metodo">
+          ${['Contanti','Bonifico','POS','Satispay'].map(m=>`<option ${(dati.metodo||'Contanti')===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Stato</label>
+      <select class="form-input" id="f_stato">
+        ${['In attesa','Pagato'].map(s=>`<option ${(dati.stato||'In attesa')===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;gap:8px">
+      <div style="display:flex;gap:8px;width:100%">
+        <button class="btn-secondary" type="button" onclick="closeModal()">Annulla</button>
+        <button class="btn-primary" onclick="salvaPagamento(${dati.id||0})">Salva</button>
+      </div>
+      ${dati.id ? `<button class="btn-danger" style="width:100%;margin-top:4px" onclick="eliminaPagamento(${dati.id})">🗑️ Elimina pagamento</button>` : ''}
+    </div>
+  `);
+}
+window.eliminaPagamento = async id => {
+  if(confirm('Eliminare questo pagamento?')) {
+    await deleteDocument('pagamenti', id);
+    closeModal();
+  }
+};
+window.salvaPagamento = async id => {
+  const d = {
+    id:id||Date.now(), iscrittoId:Number(document.getElementById('f_iscrittoId').value),
+    importo:Number(document.getElementById('f_importo').value), data:document.getElementById('f_data').value,
+    tipo:document.getElementById('f_tipo').value, metodo:document.getElementById('f_metodo').value,
+    stato:document.getElementById('f_stato').value
+  };
+  await saveDoc('pagamenti', d);
+  closeModal();
+};
+
+function modalAppuntamento(dati={}) {
+  showModal(`
+    <div class="modal-title">${dati.id?'✏️ Modifica Lezione':'➕ Nuova Lezione'}</div>
+    <div class="form-field"><label class="form-label">Titolo</label><input class="form-input" id="f_titolo" value="${dati.titolo||''}" placeholder="Es. Lezione Individuale"></div>
+    <div class="form-field"><label class="form-label">Iscritto</label>
+      <select class="form-input" id="f_iscrittoId">
+        <option value="">Seleziona...</option>
+        ${state.iscritti.map(i=>`<option value="${i.id}" ${dati.iscrittoId===i.id?'selected':''}>${i.nome} — ${i.cane}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Data</label><input class="form-input" id="f_data" type="date" value="${dati.data||today()}"></div>
+      <div class="form-field"><label class="form-label">Ora</label><input class="form-input" id="f_ora" type="time" value="${dati.ora||'09:00'}"></div>
+      <div class="form-field"><label class="form-label">Durata (min)</label><input class="form-input" id="f_durata" type="number" value="${dati.durata||60}"></div>
+      <div class="form-field"><label class="form-label">Tipo</label>
+        <select class="form-input" id="f_tipo">
+          ${['Individuale','Gruppo'].map(t=>`<option ${(dati.tipo||'Individuale')===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Note / Obiettivi</label><textarea class="form-input" id="f_note" rows="3">${dati.note||''}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" type="button" onclick="closeModal()">Annulla</button>
+      <button class="btn-primary" onclick="salvaAppuntamento(${dati.id||0})">Salva</button>
+    </div>
+  `);
+}
+window.salvaAppuntamento = async id => {
+  const d = {
+    id:id||Date.now(), titolo:document.getElementById('f_titolo').value,
+    iscrittoId:Number(document.getElementById('f_iscrittoId').value),
+    data:document.getElementById('f_data').value, ora:document.getElementById('f_ora').value,
+    durata:Number(document.getElementById('f_durata').value),
+    tipo:document.getElementById('f_tipo').value, note:document.getElementById('f_note').value
+  };
+  await saveDoc('appuntamenti', d);
+  closeModal();
+};
+
+// ── IMPOSTAZIONI NOTIFICHE ───────────────────────────────────────────────────
+function getPermessoNotifiche() {
+  if(!('Notification' in window)) return 'non_supportato';
+  return Notification.permission;
+}
+
+async function getOneSignalStatus() {
+  try {
+    if(!window.OneSignal) return false;
+    return await OneSignal.User.PushSubscription.optedIn;
+  } catch(e) { return false; }
+}
+
+function renderImpostazioni() {
+  const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
+  const perm = getPermessoNotifiche();
+  const isIOSPWA = ('standalone' in navigator && navigator.standalone);
+  const isSafariNoPWA = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) && !isIOSPWA;
+  const playerId = localStorage.getItem('ap_onesignal_player_id');
+  const attive = cfg.attive && !!playerId;
+
+  let statoNotifiche, colorStato;
+  if(isSafariNoPWA) { statoNotifiche = '⚠️ Apri app dalla Home Screen per le notifiche'; colorStato = 'var(--orange)'; }
+  else if(perm === 'non_supportato') { statoNotifiche = '❌ Non supportate — aggiorna iOS alla 16.4+'; colorStato = '#e74c3c'; }
+  else if(perm === 'denied') { statoNotifiche = '🚫 Bloccate — abilitale nelle impostazioni'; colorStato = '#e74c3c'; }
+  else if(attive) { statoNotifiche = '✅ Attive — riceverai il reminder anche con app chiusa'; colorStato = 'var(--green)'; }
+  else { statoNotifiche = '⏸ Non attive — premi il bottone per attivarle'; colorStato = 'var(--orange)'; }
+
+  return `<div class="page">
+    <div class="page-title">⚙️ Impostazioni</div>
+    <div class="page-sub">Configura i reminder automatici</div>
+
+    <div class="card">
+      <div class="card-title">🔔 Reminder Lezioni</div>
+      <p style="font-size:13px;color:var(--sub);margin-bottom:16px;line-height:1.6">
+        Ricevi una notifica con il riepilogo delle lezioni del giorno dopo.
+        L'app deve essere aperta almeno una volta al giorno per far scattare il reminder.
+      </p>
+
+      <div class="info-row" style="margin-bottom:16px">
+        <span class="info-label">Stato notifiche</span>
+        <span class="info-value" style="color:${colorStato}">${statoNotifiche}</span>
+      </div>
+
+      <div class="form-field" style="margin-bottom:14px">
+        <label class="form-label">🕐 ORARIO NOTIFICA</label>
+        <input class="form-input" type="time" id="cfg_ora" value="${cfg.ora}">
+      </div>
+      <div class="form-field" style="margin-bottom:20px">
+        <label class="form-label">📅 QUANTI GIORNI PRIMA</label>
+        <select class="form-input" id="cfg_giorni">
+          ${[1,2,3].map(g=>`<option value="${g}" ${cfg.giorni===g?'selected':''}>${g} giorno${g>1?'i':''} prima</option>`).join('')}
+        </select>
+      </div>
+
+      <button id="toggleNotBtn" type="button" class="${attive?'btn-danger':'btn-primary'}" style="width:100%;margin-bottom:10px">
+        ${attive ? '🔕 Disattiva reminder' : '🔔 Attiva reminder'}
+      </button>
+      <button class="btn-secondary" style="width:100%;margin-bottom:10px" id="salvaImpostazioniBtn">💾 Salva orario</button>
+      <button class="btn-secondary" style="width:100%" id="testNotBtn">📨 Invia notifica di test</button>
+      <div id="impostazioniMsg" style="margin-top:12px;font-size:13px;text-align:center;min-height:20px;font-weight:600"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 Account</div>
+      <div class="info-row"><span class="info-label">Email</span><span class="info-value">${state.user?.email||'—'}</span></div>
+      <div class="info-row"><span class="info-label">Nome</span><span class="info-value">${state.user?.displayName||'—'}</span></div>
+      <button class="btn-danger" style="width:100%;margin-top:14px" id="logoutBtn">🚪 Esci dall&#39;app</button>
+    </div>
+  </div>`;
+}
+
+function bindImpostazioniEvents() {
+  const showMsg = (txt, ok=true) => {
+    const el = document.getElementById('impostazioniMsg');
+    if(el) { el.textContent=txt; el.style.color=ok?'var(--green)':'#e74c3c'; }
+  };
+
+  document.getElementById('logoutBtn')?.addEventListener('click', window.doLogout);
+
+  document.getElementById('toggleNotBtn')?.addEventListener('click', async () => {
+    const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
+    if(cfg.attive) {
+      cfg.attive = false;
+      localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
+      if(window.OneSignal) await OneSignal.User.PushSubscription.optOut();
+      showMsg('Reminder disattivato.');
+      render(); return;
+    }
+    // Attiva con OneSignal
+    const isIOSPWA = ('standalone' in navigator && navigator.standalone);
+    const isSafariNoPWA = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) && !isIOSPWA;
+    if(isSafariNoPWA) { showMsg('Apri dalla Home Screen per le notifiche.', false); return; }
+    if(!window.OneSignal) { showMsg('Ricarica la pagina e riprova.', false); return; }
+    try {
+      showMsg('Attivazione in corso...');
+      await OneSignal.User.PushSubscription.optIn();
+      const optedIn = await OneSignal.User.PushSubscription.optedIn;
+      if(optedIn) {
+        const playerId = OneSignal.User.PushSubscription.id;
+        if(playerId) localStorage.setItem('ap_onesignal_player_id', playerId);
+        cfg.attive = true;
+        localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
+        showMsg('Reminder attivato! Riceverai notifiche anche con app chiusa.');
+        render();
+      } else {
+        showMsg('Permesso non concesso. Abilitalo nelle impostazioni del browser.', false);
+      }
+    } catch(e) { showMsg('Errore: ' + e.message, false); }
+  });
+
+  document.getElementById('salvaImpostazioniBtn')?.addEventListener('click', () => {
+    const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
+    cfg.ora = document.getElementById('cfg_ora').value;
+    cfg.giorni = Number(document.getElementById('cfg_giorni').value);
+    localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
+    showMsg('Orario salvato: notifica alle ' + cfg.ora + '.');
+  });
+
+  document.getElementById('testNotBtn')?.addEventListener('click', async () => {
+    const playerId = localStorage.getItem('ap_onesignal_player_id');
+    if(!playerId) { showMsg('Prima attiva i reminder con il bottone qui sopra.', false); return; }
+    showMsg('Invio notifica di test...');
+    // Manda via OneSignal REST API tramite proxy — non possiamo chiamare direttamente per CORS
+    // Usiamo invece la notifica locale come test visivo
+    try {
+      const optedIn = await OneSignal.User.PushSubscription.optedIn;
+      if(!optedIn) { showMsg('Reminder non attivi. Premi prima il bottone di attivazione.', false); return; }
+      const target = new Date();
+      target.setDate(target.getDate() + 1);
+      const targetStr = target.toISOString().split('T')[0];
+      const lezioni = state.appuntamenti.filter(a=>a.data===targetStr && a.stato!=='saltata').sort((a,b)=>a.ora.localeCompare(b.ora));
+      const targetLabel = target.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+      const body = lezioni.length===0
+        ? 'Nessuna lezione domani (' + targetLabel + '). Giornata libera!'
+        : lezioni.map(a=>{const i=getIscritto(a.iscrittoId); return a.ora+' - '+(i?.nome||'?')+' & '+(i?.cane||'?')+(a.recuperoDi?' (recupero)':'');}).join('\n');
+      // Notifica locale immediata per test
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('AgilityPro - Test Reminder', { body, tag:'ap-test', renotify:true });
+      showMsg('Notifica di test inviata!');
+    } catch(e) { showMsg('Errore: ' + e.message, false); }
+  });
+}
+
+// Controlla se è il momento di mandare la notifica (chiamato ogni minuto dal SW)
+function getNotificaSerale() {
+  const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
+  if(!cfg.attive) return null;
+  const target = new Date();
+  target.setDate(target.getDate() + (cfg.giorni||1));
+  const targetStr = target.toISOString().split('T')[0];
+  const lezioni = state.appuntamenti
+    .filter(a => a.data === targetStr && a.stato !== 'saltata')
+    .sort((a,b) => a.ora.localeCompare(b.ora));
+  const targetLabel = target.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  if(lezioni.length === 0) {
+    return { title: '🐾 AgilityPro', body: `Domani (${targetLabel}) nessuna lezione. Giornata libera! ✅` };
+  }
+  const lista = lezioni.map(a => {
+    const i = getIscritto(a.iscrittoId);
+    return `${a.ora} — ${i?.nome} & ${i?.cane}${a.recuperoDi?' 🔄':''}`;
+  }).join('\n');
+  return { title: `🐾 ${lezioni.length} lezioni ${targetLabel}`, body: lista };
+}
+
+async function scheduleTestNotification() {
+  const msgEl = document.getElementById('impostazioniMsg');
+  const showMsg = (txt, ok=true) => { if(msgEl) { msgEl.textContent=txt; msgEl.style.color=ok?'var(--green)':'#e74c3c'; }};
+
+  // 1. Controlla supporto
+  if(!('Notification' in window)) { showMsg('❌ Notifiche non supportate da questo browser.', false); return; }
+
+  // 2. Chiedi permesso se non ancora concesso
+  if(Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') { showMsg('❌ Permesso notifiche negato. Abilitalo nelle impostazioni del browser.', false); return; }
+  }
+  if(Notification.permission === 'denied') { showMsg('❌ Notifiche bloccate. Vai nelle impostazioni del browser e abilitale per questo sito.', false); return; }
+
+  // 3. Componi messaggio con lezioni di domani
+  const target = new Date();
+  target.setDate(target.getDate() + 1);
+  const targetStr = target.toISOString().split('T')[0];
+  const lezioni = state.appuntamenti.filter(a=>a.data===targetStr && a.stato!=='saltata').sort((a,b)=>a.ora.localeCompare(b.ora));
+  const targetLabel = target.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  let body;
+  if(lezioni.length===0) { body = `Nessuna lezione domani (${targetLabel}). Giornata libera! ✅`; }
+  else { body = lezioni.map(a=>{ const i=getIscritto(a.iscrittoId); return `${a.ora} — ${i?.nome||'?'} & ${i?.cane||'?'}${a.recuperoDi?' 🔄':''}`; }).join('\n'); }
+
+  // 4. Prova prima con ServiceWorker (più affidabile), poi fallback a Notification diretta
+  try {
+    if('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('🐾 AgilityPro — Reminder', { body, tag:'agilitypro-test', renotify:true });
+    } else {
+      new Notification('🐾 AgilityPro — Reminder', { body });
+    }
+    showMsg('✅ Notifica inviata! Controlla le notifiche del telefono.');
+  } catch(e) {
+    // Ultimo tentativo: Notification diretta
+    try {
+      new Notification('🐾 AgilityPro — Reminder', { body });
+      showMsg('✅ Notifica inviata!');
+    } catch(e2) {
+      showMsg('❌ Errore: ' + e2.message, false);
+    }
+  }
+}
+
+// Scheduler in-app: controlla ogni minuto (funziona con app aperta)
+// Le notifiche con app chiusa sono gestite da GitHub Actions → OneSignal
+setInterval(() => {
+  if(!state.loaded || !state.user) return;
+  const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false}');
+  if(!cfg.attive) return;
+  const now = new Date();
+  const oraCorrente = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  if(oraCorrente !== cfg.ora) return;
+  const todayStr = now.toISOString().split('T')[0];
+  if(localStorage.getItem('ap_last_notifica') === todayStr) return;
+  localStorage.setItem('ap_last_notifica', todayStr);
+  // Con app aperta usa notifica locale
+  const target = new Date();
+  target.setDate(target.getDate() + (cfg.giorni||1));
+  const targetStr = target.toISOString().split('T')[0];
+  const lezioni = state.appuntamenti.filter(a=>a.data===targetStr && a.stato!=='saltata').sort((a,b)=>a.ora.localeCompare(b.ora));
+  const targetLabel = target.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  const body = lezioni.length===0 ? 'Nessuna lezione domani (' + targetLabel + '). Libero!'
+    : lezioni.map(a=>{const i=getIscritto(a.iscrittoId); return a.ora+' - '+(i?.nome||'?')+' & '+(i?.cane||'?');}).join('\n');
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification('AgilityPro - Reminder Lezioni', { body, tag:'ap-reminder' });
+  }).catch(()=>{});
+}, 60000);
+
+// ── MODAL RECUPERO ───────────────────────────────────────────────────────────
+function modalRecupero(a) {
+  const i = getIscritto(a.iscrittoId);
+  showModal(`
+    <div class="modal-title">❌ Lezione Saltata</div>
+    <div style="background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13px">
+      <strong>${i?.nome}</strong> · ${i?.cane}<br>
+      <span style="color:var(--sub)">${a.titolo} — ${fmtDate(a.data)} alle ${a.ora}</span>
+    </div>
+    <div class="form-field">
+      <label class="form-label">📅 DATA DEL RECUPERO</label>
+      <input class="form-input" type="date" id="f_data_recupero" value="">
+    </div>
+    <div class="form-field">
+      <label class="form-label">🕐 ORA</label>
+      <input class="form-input" type="time" id="f_ora_recupero" value="${a.ora}">
+    </div>
+    <div class="form-field">
+      <label class="form-label">📝 NOTE (opzionale)</label>
+      <input class="form-input" type="text" id="f_note_recupero" placeholder="Es. concordato con il cliente">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" type="button" onclick="closeModal()">Annulla</button>
+      <button class="btn-primary" type="button" onclick="confermaSaltata(${a.id})">Conferma e crea recupero</button>
+    </div>
+  `);
+}
+
+window.confermaSaltata = async id => {
+  const a = state.appuntamenti.find(x=>x.id===id);
+  if(!a) return;
+  const dataRecupero = document.getElementById('f_data_recupero').value;
+  const oraRecupero = document.getElementById('f_ora_recupero').value;
+  const noteRecupero = document.getElementById('f_note_recupero').value;
+  if(!dataRecupero) { alert('Seleziona la data del recupero.'); return; }
+  await saveDoc('appuntamenti', {...a, stato:'saltata'});
+  const recupero = {
+    id: Date.now(),
+    iscrittoId: a.iscrittoId,
+    titolo: 'Recupero — ' + a.titolo,
+    data: dataRecupero,
+    ora: oraRecupero,
+    durata: a.durata,
+    tipo: a.tipo,
+    note: noteRecupero || ('Recupero della lezione del ' + fmtDate(a.data)),
+    recuperoDi: a.data,
+  };
+  await saveDoc('appuntamenti', recupero);
+  closeModal();
+};
+
+// ── BIND EVENTS ──────────────────────────────────────────────────────────────
+function bindEvents() {
+  // Search
+  const si = document.getElementById('searchInput');
+  if(si) si.oninput = e => { state.search = e.target.value; render(); };
+
+  // Back
+  const bb = document.getElementById('backBtn');
+  if(bb) bb.onclick = () => { state.dettaglio = null; render(); };
+
+  // Dettaglio iscritto
+  document.querySelectorAll('[data-detail]').forEach(el =>
+    el.onclick = () => { state.dettaglio = state.iscritti.find(i=>i.id===Number(el.dataset.detail)); render(); });
+
+  // Goto tab
+  document.querySelectorAll('[data-goto]').forEach(el =>
+    el.onclick = () => { state.tab = el.dataset.goto; render(); });
+
+  // Edit iscritto
+  document.querySelectorAll('[data-edit-iscritto]').forEach(el =>
+    el.onclick = () => modalIscritto(state.iscritti.find(i=>i.id===Number(el.dataset.editIscritto))));
+
+  // Del iscritto
+  document.querySelectorAll('[data-del-iscritto]').forEach(el =>
+    el.onclick = async () => { if(confirm('Eliminare questo iscritto?')) { await deleteDocument('iscritti', Number(el.dataset.delIscritto)); state.dettaglio=null; }});
+
+  // Confirm pagamento
+  document.querySelectorAll('[data-pag-confirm]').forEach(el =>
+    el.onclick = async () => { const p = state.pagamenti.find(x=>x.id===Number(el.dataset.pagConfirm)); if(p) await saveDoc('pagamenti', {...p, stato:'Pagato'}); });
+
+  // Edit pagamento
+  document.querySelectorAll('[data-edit-pag]').forEach(el =>
+    el.onclick = () => modalPagamento(state.pagamenti.find(p=>p.id===Number(el.dataset.editPag))));
+
+  // Del pagamento
+  document.querySelectorAll('[data-del-pag]').forEach(el =>
+    el.onclick = () => { if(confirm('Eliminare questo pagamento?')) { state.pagamenti = state.pagamenti.filter(p=>p.id!==Number(el.dataset.delPag)); save(); render(); }});
+
+  // Filtro calendario
+  document.querySelectorAll('[data-cal-filtro]').forEach(el =>
+    el.onclick = () => { state.calFiltro = el.dataset.calFiltro; render(); });
+
+  // Segna effettuata
+  document.querySelectorAll('[data-segna-effettuata]').forEach(el => el.onclick = async () => {
+    const a = state.appuntamenti.find(x=>x.id===Number(el.dataset.segnaEffettuata));
+    if(a) await saveDoc('appuntamenti', {...a, stato:'effettuata'});
+  });
+
+  // Segna saltata → apre modal per scegliere data recupero
+  document.querySelectorAll('[data-segna-saltata]').forEach(el => el.onclick = () => {
+    const a = state.appuntamenti.find(x=>x.id===Number(el.dataset.segnaSaltata));
+    if(a) modalRecupero(a);
+  });
+
+  // Reset stato lezione
+  document.querySelectorAll('[data-reset-stato]').forEach(el => el.onclick = async () => {
+    const a = state.appuntamenti.find(x=>x.id===Number(el.dataset.resetStato));
+    if(!a) return;
+    if(!confirm('Rimuovere lo stato da questa lezione?')) return;
+    const copia = {...a};
+    delete copia.stato;
+    await saveDoc('appuntamenti', copia);
+  });
+
+  // WhatsApp reminder lezione
+  document.querySelectorAll('[data-wa-lez]').forEach(el => el.onclick = () => {
+    const a = state.appuntamenti.find(x=>x.id===Number(el.dataset.waLez));
+    const i = getIscritto(a?.iscrittoId);
+    if(!i?.telefono) return alert('Numero di telefono non presente nella scheda iscritto.');
+    const tel = i.telefono.replace(/\D/g,'');
+    const msg = encodeURIComponent('Ciao ' + i.nome + '! 🐾\nTi ricordo la lezione di agility per te e ' + i.cane + ' il *' + fmtDate(a.data) + '* alle *' + a.ora + '*.' + (a.note ? '\nObiettivo: ' + a.note : '') + '\nA presto! 🏆');
+    location.href = 'https://wa.me/39' + tel + '?text=' + msg;
+  });
+
+  // WhatsApp sollecito pagamento
+  document.querySelectorAll('[data-wa-pag]').forEach(el => el.onclick = () => {
+    const i = state.iscritti.find(x=>x.id===Number(el.dataset.waPag));
+    if(!i?.telefono) return alert('Numero di telefono non presente nella scheda iscritto.');
+    const tel = i.telefono.replace(/\D/g,'');
+    const mese = new Date().toLocaleDateString('it-IT',{month:'long', year:'numeric'});
+    const msg = encodeURIComponent('Ciao ' + i.nome + '! 🐾\nTi ricordo che il pagamento della quota di *' + mese + '* è ancora in sospeso.\nSe hai dubbi sono a disposizione. Grazie! 🙏');
+    location.href = 'https://wa.me/39' + tel + '?text=' + msg;
+  });
+
+  // New pag da dettaglio
+  document.querySelectorAll('[data-new-pag]').forEach(el =>
+    el.onclick = () => modalPagamento({ iscrittoId:Number(el.dataset.newPag), data:today(), stato:'In attesa' }));
+
+  // Edit lezione
+  document.querySelectorAll('[data-edit-lez]').forEach(el =>
+    el.onclick = () => modalAppuntamento(state.appuntamenti.find(a=>a.id===Number(el.dataset.editLez))));
+
+  // Del lezione
+  document.querySelectorAll('[data-del-lez]').forEach(el =>
+    el.onclick = async () => { if(confirm('Eliminare questa lezione?')) { await deleteDocument('appuntamenti', Number(el.dataset.delLez)); }});
+
+  // New lez da dettaglio
+  document.querySelectorAll('[data-new-lez]').forEach(el =>
+    el.onclick = () => modalAppuntamento({ iscrittoId:Number(el.dataset.newLez), data:today(), tipo:'Individuale' }));
+}
+
+// ── NAV & ADD BTN ──────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(b =>
+  b.onclick = () => { state.tab = b.dataset.tab; state.dettaglio = null; render(); });
+
+document.getElementById('addBtn').onclick = () => {
+  if(state.tab==='iscritti') modalIscritto();
+  else if(state.tab==='pagamenti') modalPagamento();
+  else if(state.tab==='calendario') modalAppuntamento();
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+// L'auth è gestita da onAuthStateChanged — non serve nulla qui
+</script>
+</body>
+</html>
