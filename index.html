@@ -1174,6 +1174,9 @@ function bindImpostazioniEvents() {
       cfg.attive = false;
       localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
       if(window.OneSignal) await OneSignal.User.PushSubscription.optOut();
+      try {
+        await saveDoc('impostazioni', { id:'notifiche', attive:false, ora:cfg.ora, giorni:cfg.giorni, lastSent:cfg.lastSent||'' });
+      } catch(e) {}
       showMsg('Reminder disattivato.');
       render(); return;
     }
@@ -1191,6 +1194,9 @@ function bindImpostazioniEvents() {
         if(playerId) localStorage.setItem('ap_onesignal_player_id', playerId);
         cfg.attive = true;
         localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
+        try {
+          await saveDoc('impostazioni', { id:'notifiche', attive:true, ora:cfg.ora, giorni:cfg.giorni, lastSent:cfg.lastSent||'' });
+        } catch(e) {}
         showMsg('Reminder attivato! Riceverai notifiche anche con app chiusa.');
         render();
       } else {
@@ -1199,12 +1205,24 @@ function bindImpostazioniEvents() {
     } catch(e) { showMsg('Errore: ' + e.message, false); }
   });
 
-  document.getElementById('salvaImpostazioniBtn')?.addEventListener('click', () => {
+  document.getElementById('salvaImpostazioniBtn')?.addEventListener('click', async () => {
     const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
     cfg.ora = document.getElementById('cfg_ora').value;
     cfg.giorni = Number(document.getElementById('cfg_giorni').value);
     localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
-    showMsg('Orario salvato: notifica alle ' + cfg.ora + '.');
+    // Salva su Firestore per GitHub Actions
+    try {
+      await saveDoc('impostazioni', {
+        id: 'notifiche',
+        attive: cfg.attive,
+        ora: cfg.ora,
+        giorni: cfg.giorni,
+        lastSent: cfg.lastSent || ''
+      });
+      showMsg('Orario salvato! Reminder alle ' + cfg.ora + ' ogni sera.');
+    } catch(e) {
+      showMsg('Orario salvato localmente.'); // Fallback
+    }
   });
 
   document.getElementById('testNotBtn')?.addEventListener('click', async () => {
