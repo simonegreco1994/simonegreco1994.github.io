@@ -2,7 +2,7 @@ name: AgilityPro — Reminder Serale
 
 on:
   schedule:
-    - cron: '0 19 * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -16,26 +16,24 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_USER_UID: ${{ secrets.FIREBASE_USER_UID }}
-          GIORNI_ANTICIPO: ${{ secrets.GIORNI_ANTICIPO }}
         run: |
           python3 - << 'PYEOF'
-          import urllib.request, json, os
-          from datetime import datetime, timedelta
+          import urllib.request, json, os, calendar
+          from datetime import datetime, timedelta, timezone
 
           ONESIGNAL_APP_ID = os.environ['ONESIGNAL_APP_ID']
           ONESIGNAL_API_KEY = os.environ['ONESIGNAL_API_KEY']
           PROJECT_ID = os.environ['FIREBASE_PROJECT_ID']
           API_KEY = os.environ['FIREBASE_API_KEY']
           USER_UID = os.environ['FIREBASE_USER_UID']
-          GIORNI = int(os.environ.get('GIORNI_ANTICIPO', '1'))
-
-          target = datetime.utcnow() + timedelta(days=GIORNI)
-          target_str = target.strftime('%Y-%m-%d')
-          mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre']
-          giorni_sett = ['lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica']
-          target_label = giorni_sett[target.weekday()] + ' ' + str(target.day) + ' ' + mesi[target.month-1]
 
           base = f'https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents'
+
+          def get_field(doc, field):
+            f = doc.get('fields', {}).get(field, {})
+            for t in ['stringValue','integerValue','booleanValue']:
+              if t in f: return f[t]
+            return None
 
           def get_docs(path):
             try:
@@ -46,12 +44,61 @@ jobs:
               print(f'Errore {path}: {e}')
               return []
 
-          def get_field(doc, field):
-            f = doc.get('fields', {}).get(field, {})
-            for t in ['stringValue','integerValue','doubleValue','booleanValue']:
-              if t in f: return f[t]
-            return None
+          # Leggi impostazioni da Firestore
+          cfg = {'attive': True, 'ora': '20:00', 'giorni': 1, 'lastSent': ''}
+          try:
+            url = f'{base}/users/{USER_UID}/impostazioni/notifiche?key={API_KEY}'
+            with urllib.request.urlopen(url, timeout=10) as r:
+              doc = json.loads(r.read())
+              cfg['attive'] = get_field(doc, 'attive') or False
+              cfg['ora'] = get_field(doc, 'ora') or '20:00'
+              cfg['giorni'] = int(get_field(doc, 'giorni') or 1)
+              cfg['lastSent'] = get_field(doc, 'lastSent') or ''
+              print(f'Impostazioni lette: {cfg}')
+          except Exception as e:
+            print(f'Impostazioni non trovate, uso default: {e}')
 
+          if not cfg['attive']:
+            print('Reminder disattivati, skip.')
+            exit(0)
+
+          # Ora italiana (UTC+1 inverno, UTC+2 estate)
+          now_utc = datetime.now(timezone.utc)
+          def is_dst(dt):
+            year = dt.year
+            mar = max(week[-1] for week in calendar.monthcalendar(year, 3))
+            oct_last = max(week[-1] for week in calendar.monthcalendar(year, 10))
+            start = datetime(year, 3, mar, 1, tzinfo=timezone.utc)
+            end = datetime(year, 10, oct_last, 1, tzinfo=timezone.utc)
+            return start <= dt < end
+          offset = 2 if is_dst(now_utc) else 1
+          now_it = now_utc + timedelta(hours=offset)
+          ora_corrente = now_it.strftime('%H:%M')
+          oggi_str = now_it.strftime('%Y-%m-%d')
+          print(f'Ora italiana: {ora_corrente}, orario reminder: {cfg["ora"]}')
+
+          # Controlla se e il momento giusto (tolleranza 30 min)
+          def t2m(t):
+            h, m = map(int, t.split(':'))
+            return h * 60 + m
+          if abs(t2m(ora_corrente) - t2m(cfg['ora'])) > 30:
+            print(f'Non ancora il momento, skip.')
+            exit(0)
+
+          # Evita duplicati
+          if cfg['lastSent'] == oggi_str:
+            print(f'Notifica gia inviata oggi, skip.')
+            exit(0)
+
+          # Data target
+          target = now_it + timedelta(days=cfg['giorni'])
+          target_str = target.strftime('%Y-%m-%d')
+          mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
+                  'luglio','agosto','settembre','ottobre','novembre','dicembre']
+          giorni_sett = ['lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica']
+          target_label = giorni_sett[target.weekday()] + ' ' + str(target.day) + ' ' + mesi[target.month-1]
+
+          # Leggi appuntamenti e iscritti
           appuntamenti = get_docs(f'users/{USER_UID}/appuntamenti')
           iscritti_docs = get_docs(f'users/{USER_UID}/iscritti')
           iscritti = {str(get_field(d,'id') or d['name'].split('/')[-1]): d for d in iscritti_docs}
@@ -78,14 +125,14 @@ jobs:
           print(f'Titolo: {titolo}')
           print(f'Corpo: {corpo}')
 
+          # Manda notifica OneSignal
           payload = json.dumps({
             'app_id': ONESIGNAL_APP_ID,
             'included_segments': ['All'],
             'headings': {'it': titolo, 'en': titolo},
             'contents': {'it': corpo, 'en': corpo},
-            'url': 'https://simonegreco1994.github.io/agilitypro/',
+            'url': 'https://simonegreco1994.github.io/',
           }).encode()
-
           req = urllib.request.Request(
             'https://api.onesignal.com/notifications',
             data=payload,
@@ -93,5 +140,16 @@ jobs:
           )
           with urllib.request.urlopen(req, timeout=10) as r:
             result = json.loads(r.read())
-            print(f'Risultato: {result}')
+            print(f'Risultato OneSignal: {result}')
+
+          # Salva lastSent su Firestore
+          try:
+            patch_url = f'{base}/users/{USER_UID}/impostazioni/notifiche?key={API_KEY}&updateMask.fieldPaths=lastSent'
+            patch_body = json.dumps({'fields': {'lastSent': {'stringValue': oggi_str}}}).encode()
+            patch_req = urllib.request.Request(patch_url, data=patch_body, method='PATCH',
+              headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(patch_req, timeout=10) as r:
+              print(f'lastSent aggiornato: {oggi_str}')
+          except Exception as e:
+            print(f'Errore aggiornamento lastSent: {e}')
           PYEOF
