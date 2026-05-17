@@ -1210,18 +1210,20 @@ function bindImpostazioniEvents() {
     cfg.ora = document.getElementById('cfg_ora').value;
     cfg.giorni = Number(document.getElementById('cfg_giorni').value);
     localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
-    // Salva su Firestore per GitHub Actions
+    // Salva su Firestore per GitHub Actions — azzera lastSent per applicare subito
+    cfg.lastSent = '';
+    localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
     try {
       await saveDoc('impostazioni', {
         id: 'notifiche',
         attive: cfg.attive,
         ora: cfg.ora,
         giorni: cfg.giorni,
-        lastSent: cfg.lastSent || ''
+        lastSent: ''
       });
       showMsg('Orario salvato! Reminder alle ' + cfg.ora + ' ogni sera.');
     } catch(e) {
-      showMsg('Orario salvato localmente.'); // Fallback
+      showMsg('Orario salvato localmente.');
     }
   });
 
