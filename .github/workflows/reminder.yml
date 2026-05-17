@@ -81,7 +81,7 @@ jobs:
           def t2m(t):
             h, m = map(int, t.split(':'))
             return h * 60 + m
-          if abs(t2m(ora_corrente) - t2m(cfg['ora'])) > 30:
+          if abs(t2m(ora_corrente) - t2m(cfg['ora'])) > 90:
             print(f'Non ancora il momento, skip.')
             exit(0)
 
