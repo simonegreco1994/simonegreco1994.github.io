@@ -1102,51 +1102,38 @@ async function getOneSignalStatus() {
 }
 
 function renderImpostazioni() {
-  const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
   const perm = getPermessoNotifiche();
   const isIOSPWA = ('standalone' in navigator && navigator.standalone);
   const isSafariNoPWA = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) && !isIOSPWA;
   const playerId = localStorage.getItem('ap_onesignal_player_id');
-  const attive = cfg.attive && !!playerId;
+  const attive = !!playerId;
 
   let statoNotifiche, colorStato;
   if(isSafariNoPWA) { statoNotifiche = '⚠️ Apri app dalla Home Screen per le notifiche'; colorStato = 'var(--orange)'; }
   else if(perm === 'non_supportato') { statoNotifiche = '❌ Non supportate — aggiorna iOS alla 16.4+'; colorStato = '#e74c3c'; }
-  else if(perm === 'denied') { statoNotifiche = '🚫 Bloccate — abilitale nelle impostazioni'; colorStato = '#e74c3c'; }
-  else if(attive) { statoNotifiche = '✅ Attive — riceverai il reminder anche con app chiusa'; colorStato = 'var(--green)'; }
+  else if(perm === 'denied') { statoNotifiche = '🚫 Bloccate — abilitale nelle impostazioni del dispositivo'; colorStato = '#e74c3c'; }
+  else if(attive) { statoNotifiche = '✅ Attive — riceverai il reminder ogni sera alle 20:00'; colorStato = 'var(--green)'; }
   else { statoNotifiche = '⏸ Non attive — premi il bottone per attivarle'; colorStato = 'var(--orange)'; }
 
   return `<div class="page">
     <div class="page-title">⚙️ Impostazioni</div>
-    <div class="page-sub">Configura i reminder automatici</div>
+    <div class="page-sub">Gestisci notifiche e account</div>
 
     <div class="card">
       <div class="card-title">🔔 Reminder Lezioni</div>
       <p style="font-size:13px;color:var(--sub);margin-bottom:16px;line-height:1.6">
-        Ricevi una notifica con il riepilogo delle lezioni del giorno dopo.
-        L'app deve essere aperta almeno una volta al giorno per far scattare il reminder.
+        Ogni sera alle <strong style="color:var(--text)">20:00</strong> ricevi una notifica con
+        il riepilogo delle lezioni del giorno dopo — anche con app chiusa.
       </p>
 
-      <div class="info-row" style="margin-bottom:16px">
-        <span class="info-label">Stato notifiche</span>
+      <div class="info-row" style="margin-bottom:20px">
+        <span class="info-label">Stato</span>
         <span class="info-value" style="color:${colorStato}">${statoNotifiche}</span>
       </div>
 
-      <div class="form-field" style="margin-bottom:14px">
-        <label class="form-label">🕐 ORARIO NOTIFICA</label>
-        <input class="form-input" type="time" id="cfg_ora" value="${cfg.ora}">
-      </div>
-      <div class="form-field" style="margin-bottom:20px">
-        <label class="form-label">📅 QUANTI GIORNI PRIMA</label>
-        <select class="form-input" id="cfg_giorni">
-          ${[1,2,3].map(g=>`<option value="${g}" ${cfg.giorni===g?'selected':''}>${g} giorno${g>1?'i':''} prima</option>`).join('')}
-        </select>
-      </div>
-
       <button id="toggleNotBtn" type="button" class="${attive?'btn-danger':'btn-primary'}" style="width:100%;margin-bottom:10px">
-        ${attive ? '🔕 Disattiva reminder' : '🔔 Attiva reminder'}
+        ${attive ? '🔕 Disattiva notifiche' : '🔔 Attiva notifiche'}
       </button>
-      <button class="btn-secondary" style="width:100%;margin-bottom:10px" id="salvaImpostazioniBtn">💾 Salva orario</button>
       <button class="btn-secondary" style="width:100%" id="testNotBtn">📨 Invia notifica di test</button>
       <div id="impostazioniMsg" style="margin-top:12px;font-size:13px;text-align:center;min-height:20px;font-weight:600"></div>
     </div>
@@ -1171,13 +1158,9 @@ function bindImpostazioniEvents() {
   document.getElementById('toggleNotBtn')?.addEventListener('click', async () => {
     const cfg = JSON.parse(localStorage.getItem('ap_notifiche') || '{"attive":false,"ora":"20:00","giorni":1}');
     if(cfg.attive) {
-      cfg.attive = false;
-      localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
+      localStorage.removeItem('ap_onesignal_player_id');
       if(window.OneSignal) await OneSignal.User.PushSubscription.optOut();
-      try {
-        await saveDoc('impostazioni', { id:'notifiche', attive:false, ora:cfg.ora, giorni:cfg.giorni, lastSent:cfg.lastSent||'' });
-      } catch(e) {}
-      showMsg('Reminder disattivato.');
+      showMsg('Notifiche disattivate.');
       render(); return;
     }
     // Attiva con OneSignal
@@ -1192,12 +1175,8 @@ function bindImpostazioniEvents() {
       if(optedIn) {
         const playerId = OneSignal.User.PushSubscription.id;
         if(playerId) localStorage.setItem('ap_onesignal_player_id', playerId);
-        cfg.attive = true;
-        localStorage.setItem('ap_notifiche', JSON.stringify(cfg));
-        try {
-          await saveDoc('impostazioni', { id:'notifiche', attive:true, ora:cfg.ora, giorni:cfg.giorni, lastSent:cfg.lastSent||'' });
-        } catch(e) {}
-        showMsg('Reminder attivato! Riceverai notifiche anche con app chiusa.');
+        localStorage.setItem('ap_onesignal_player_id', OneSignal.User.PushSubscription.id || 'subscribed');
+        showMsg('Notifiche attivate! Riceverai il reminder ogni sera alle 20:00.');
         render();
       } else {
         showMsg('Permesso non concesso. Abilitalo nelle impostazioni del browser.', false);
