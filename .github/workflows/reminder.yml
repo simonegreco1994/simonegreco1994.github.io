@@ -1,17 +1,8 @@
 name: AgilityPro — Reminder Serale
 
 on:
-  schedule:
-    # ──────────────────────────────────────────────────────────────
-    # ORARIO NOTIFICA — modifica qui per cambiare l'orario
-    # Il formato è UTC: sottrai 1 ora in inverno, 2 ore in estate
-    # Esempi:
-    #   Notifica alle 20:00 italiane (inverno): '0 19 * * *'
-    #   Notifica alle 20:00 italiane (estate):  '0 18 * * *'
-    #   Notifica alle 19:00 italiane (inverno): '0 18 * * *'
-    #   Notifica alle 21:00 italiane (inverno): '0 20 * * *'
-    # ──────────────────────────────────────────────────────────────
-    - cron: '0 18 * * *'   # ← CAMBIA SOLO QUESTO NUMERO (ora in UTC)
+  # Attivato solo da cron-job.org tramite API GitHub
+  # L'orario si gestisce su cron-job.org, non qui
   workflow_dispatch:
 
 jobs:
