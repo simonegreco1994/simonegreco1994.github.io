@@ -1161,11 +1161,9 @@ function bindImpostazioniEvents() {
       localStorage.removeItem('ap_onesignal_player_id');
       if(window.OneSignal) await OneSignal.User.PushSubscription.optOut();
       try {
-        await saveDoc('impostazioni', {
-          id: 'notifiche',
-          attive: false,
-          playerId: '',
-          email: state.user?.email || ''
+        await saveDoc('impostazioni', { id:'notifiche', attive:false, playerId:'', email:state.user?.email||'' });
+        await setDoc(doc(db, 'subscribers', state.user.uid), {
+          playerId:'', uid:state.user.uid, email:state.user?.email||'', attive:false
         });
       } catch(e) {}
       showMsg('Notifiche disattivate.');
@@ -1186,15 +1184,20 @@ function bindImpostazioniEvents() {
         const pid = OneSignal.User.PushSubscription.id;
         if(pid) {
           localStorage.setItem('ap_onesignal_player_id', pid);
-          // Salva su Firestore per il workflow multi-utente
+          const uid = state.user.uid;
           try {
+            // Salva nelle impostazioni utente
             await saveDoc('impostazioni', {
               id: 'notifiche',
               attive: true,
               playerId: pid,
               email: state.user.email || ''
             });
-          } catch(e) { console.warn('Errore salvataggio impostazioni:', e); }
+            // Salva nella collection pubblica subscribers
+            await setDoc(doc(db, 'subscribers', uid), {
+              playerId: pid, uid, email: state.user.email||'', attive: true
+            });
+          } catch(e) { console.warn('Errore salvataggio:', e); }
         }
         showMsg('Notifiche attivate! Riceverai il reminder ogni sera alle 20:00.');
         render();
