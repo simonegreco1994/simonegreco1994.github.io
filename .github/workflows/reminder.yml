@@ -1,8 +1,6 @@
 name: AgilityPro — Reminder Serale
 
 on:
-  # Attivato solo da cron-job.org tramite API GitHub
-  # L'orario si gestisce su cron-job.org, non qui
   workflow_dispatch:
 
 jobs:
@@ -42,25 +40,14 @@ jobs:
               print(f'Errore {path}: {e}')
               return []
 
-          def get_doc(path):
-            try:
-              url = f'{base}/{path}?key={API_KEY}'
-              with urllib.request.urlopen(url, timeout=10) as r:
-                return json.loads(r.read())
-            except:
-              return None
-
           # Ora italiana
           now_utc = datetime.now(timezone.utc)
           def is_dst(dt):
             year = dt.year
             mar = max(week[-1] for week in calendar.monthcalendar(year, 3))
             oct_last = max(week[-1] for week in calendar.monthcalendar(year, 10))
-            start = datetime(year, 3, mar, 1, tzinfo=timezone.utc)
-            end = datetime(year, 10, oct_last, 1, tzinfo=timezone.utc)
-            return start <= dt < end
-          offset = 2 if is_dst(now_utc) else 1
-          now_it = now_utc + timedelta(hours=offset)
+            return datetime(year,3,mar,1,tzinfo=timezone.utc) <= dt < datetime(year,10,oct_last,1,tzinfo=timezone.utc)
+          now_it = now_utc + timedelta(hours=2 if is_dst(now_utc) else 1)
 
           # Data target (domani)
           target = now_it + timedelta(days=1)
@@ -71,34 +58,22 @@ jobs:
           target_label = giorni_sett[target.weekday()] + ' ' + str(target.day) + ' ' + mesi[target.month-1]
           print(f'Ora italiana: {now_it.strftime("%H:%M")}, target: {target_str} ({target_label})')
 
-          # Leggi tutti gli utenti da Firestore
-          utenti = get_docs('users')
-          print(f'Utenti trovati: {len(utenti)}')
+          # Leggi subscribers dalla collection pubblica
+          subscribers = get_docs('subscribers')
+          print(f'Subscribers trovati: {len(subscribers)}')
 
-          for utente in utenti:
-            uid = utente['name'].split('/')[-1]
-            print(f'\n--- Utente: {uid} ---')
+          for sub in subscribers:
+            uid = get_field(sub, 'uid') or sub['name'].split('/')[-1]
+            player_id = get_field(sub, 'playerId')
+            email = get_field(sub, 'email') or uid
+            attive = get_field(sub, 'attive')
 
-            # Leggi impostazioni notifiche
-            cfg_doc = get_doc(f'users/{uid}/impostazioni/notifiche')
-            if not cfg_doc:
-              print(f'Nessuna impostazione per {uid}, skip.')
+            print(f'\n--- {email} ---')
+            if not attive or not player_id:
+              print('Notifiche non attive o player ID mancante, skip.')
               continue
 
-            attive = get_field(cfg_doc, 'attive')
-            player_id = get_field(cfg_doc, 'playerId')
-            email = get_field(cfg_doc, 'email') or uid
-
-            if not attive:
-              print(f'Notifiche disattivate per {email}, skip.')
-              continue
-            if not player_id:
-              print(f'Nessun player ID per {email}, skip.')
-              continue
-
-            print(f'Invio reminder a {email} (player: {player_id[:8]}...)')
-
-            # Leggi appuntamenti e iscritti
+            # Leggi appuntamenti e iscritti dell'utente
             appuntamenti = get_docs(f'users/{uid}/appuntamenti')
             iscritti_docs = get_docs(f'users/{uid}/iscritti')
             iscritti = {str(get_field(d,'id') or d['name'].split('/')[-1]): d for d in iscritti_docs}
@@ -125,7 +100,7 @@ jobs:
             print(f'Titolo: {titolo}')
             print(f'Corpo: {corpo}')
 
-            # Manda notifica OneSignal al singolo utente tramite player ID
+            # Manda notifica OneSignal al singolo utente
             payload = json.dumps({
               'app_id': ONESIGNAL_APP_ID,
               'include_subscription_ids': [player_id],
@@ -144,8 +119,9 @@ jobs:
                 result = json.loads(r.read())
                 print(f'OneSignal: {result}')
             except Exception as e:
-              print(f'Errore invio a {email}: {e}')
+              print(f'Errore invio: {e}')
 
           print('\nDone!')
           PYEOF
+
 
