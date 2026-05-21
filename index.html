@@ -1160,6 +1160,14 @@ function bindImpostazioniEvents() {
     if(cfg.attive) {
       localStorage.removeItem('ap_onesignal_player_id');
       if(window.OneSignal) await OneSignal.User.PushSubscription.optOut();
+      try {
+        await saveDoc('impostazioni', {
+          id: 'notifiche',
+          attive: false,
+          playerId: '',
+          email: state.user?.email || ''
+        });
+      } catch(e) {}
       showMsg('Notifiche disattivate.');
       render(); return;
     }
@@ -1175,7 +1183,19 @@ function bindImpostazioniEvents() {
       if(optedIn) {
         const playerId = OneSignal.User.PushSubscription.id;
         if(playerId) localStorage.setItem('ap_onesignal_player_id', playerId);
-        localStorage.setItem('ap_onesignal_player_id', OneSignal.User.PushSubscription.id || 'subscribed');
+        const pid = OneSignal.User.PushSubscription.id;
+        if(pid) {
+          localStorage.setItem('ap_onesignal_player_id', pid);
+          // Salva su Firestore per il workflow multi-utente
+          try {
+            await saveDoc('impostazioni', {
+              id: 'notifiche',
+              attive: true,
+              playerId: pid,
+              email: state.user.email || ''
+            });
+          } catch(e) { console.warn('Errore salvataggio impostazioni:', e); }
+        }
         showMsg('Notifiche attivate! Riceverai il reminder ogni sera alle 20:00.');
         render();
       } else {
