@@ -96,12 +96,15 @@
   }
   .nav-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center;
-    gap: 3px; padding: 10px 4px; background: none; border: none;
+    justify-content: center;
+    gap: 2px; padding: 8px 2px; background: none; border: none;
     color: var(--sub); cursor: pointer; font-family: 'Sora', sans-serif;
-    font-size: 10px; font-weight: 600; transition: color 0.15s;
+    font-size: 9px; font-weight: 600; transition: color 0.15s;
+    min-width: 0; overflow: hidden;
   }
   .nav-btn.active { color: var(--accent); }
-  .nav-btn .nav-icon { font-size: 20px; }
+  .nav-btn .nav-icon { font-size: 18px; line-height: 1; }
+  .nav-btn span:not(.nav-icon) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
 
   /* ── STATS GRID ── */
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
@@ -313,22 +316,22 @@
 
   <nav class="bottomnav">
     <button class="nav-btn active" data-tab="dashboard">
-      <span class="nav-icon">◈</span>Dashboard
+      <span class="nav-icon">🏠</span><span>Home</span>
     </button>
     <button class="nav-btn" data-tab="iscritti">
-      <span class="nav-icon">◉</span>Iscritti
+      <span class="nav-icon">🐕</span><span>Iscritti</span>
     </button>
     <button class="nav-btn" data-tab="pagamenti">
-      <span class="nav-icon">€</span>Pagamenti
+      <span class="nav-icon">💰</span><span>Pagamenti</span>
     </button>
     <button class="nav-btn" data-tab="calendario">
-      <span class="nav-icon">◷</span>Lezioni
+      <span class="nav-icon">📅</span><span>Lezioni</span>
     </button>
     <button class="nav-btn" data-tab="statistiche">
-      <span class="nav-icon">▦</span>Statistiche
+      <span class="nav-icon">📊</span><span>Statistiche</span>
     </button>
     <button class="nav-btn" data-tab="impostazioni">
-      <span class="nav-icon">⚙</span>Imposta
+      <span class="nav-icon">⚙️</span><span>Imposta</span>
     </button>
   </nav>
 </div>
