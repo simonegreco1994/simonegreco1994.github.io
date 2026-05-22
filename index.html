@@ -580,7 +580,9 @@ function renderDashboard() {
   const appOggi = state.appuntamenti.filter(a=>a.data===today() && a.stato!=='saltata').sort((a,b)=>a.ora.localeCompare(b.ora));
   const appProssimi = state.appuntamenti.filter(a=>a.data>today() && a.stato!=='saltata').sort((a,b)=>a.data.localeCompare(b.data)||a.ora.localeCompare(b.ora));
   const inAttesaList = state.pagamenti.filter(p=>p.stato==='In attesa');
-  const sollecitare = state.iscritti.filter(i => !state.pagamenti.some(p=>p.iscrittoId===i.id && p.data.startsWith(new Date().toISOString().slice(0,7))));
+  // Pagamenti in attesa con data scaduta (data < oggi)
+  const pagamentiScaduti = state.pagamenti.filter(p => p.stato==='In attesa' && p.data < today());
+  const sollecitare = state.iscritti.filter(i => pagamentiScaduti.some(p=>p.iscrittoId===i.id));
 
   // Helper WhatsApp lezione
   const waBtnLez = a => {
@@ -729,7 +731,7 @@ function renderDettaglio() {
     </div>
     <div class="card">
       <div class="card-title">📋 Contatti</div>
-      ${[['📞',i.telefono],['📧',i.email],['🪪',i.tessera||'—'],['📅','Dal '+fmtDate(i.dataIscrizione)],['📝',i.note||'—']].map(([k,v])=>`
+      ${[['📞',i.telefono],['📧',i.email],['🪪',i.tessera||'—'],['💳',i.abbonamento&&i.abbonamento!=='Nessuno'?(i.abbonamento+' — €'+(i.importoAbbonamento||0)):'Nessuno'],['📅','Dal '+fmtDate(i.dataIscrizione)],['📝',i.note||'—']].map(([k,v])=>`
         <div class="info-row"><span class="info-label">${k}</span><span class="info-value">${v}</span></div>`).join('')}
       <div class="action-row">
         <button class="btn-secondary" data-edit-iscritto="${i.id}">✏️ Modifica</button>
@@ -968,6 +970,14 @@ function modalIscritto(dati={}) {
       </div>
       <div class="form-field"><label class="form-label">Telefono</label><input class="form-input" id="f_telefono" value="${dati.telefono||''}" type="tel"></div>
       <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="f_email" value="${dati.email||''}" type="email"></div>
+      <div class="form-field"><label class="form-label">Abbonamento</label>
+        <select class="form-input" id="f_abbonamento">
+          ${['Nessuno','Mensile','Trimestrale','Annuale'].map(t=>`<option ${(dati.abbonamento||'Nessuno')===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Importo € abbonamento</label>
+        <input class="form-input" type="number" id="f_importo_abb" value="${dati.importoAbbonamento||0}" min="0">
+      </div>
     </div>
     <div class="form-field"><label class="form-label">Avatar</label>
       <div class="avatar-row">${avs.map(a=>`<button class="avatar-btn ${(dati.avatar||'🐕')===a?'selected':''}" onclick="selectAvatar(this,'${a}')">${a}</button>`).join('')}</div>
@@ -991,6 +1001,8 @@ window.salvaIscritto = async id => {
     livello:document.getElementById('f_livello').value,
     telefono:document.getElementById('f_telefono').value, email:document.getElementById('f_email').value,
     note:document.getElementById('f_note').value, avatar:window._selAvatar,
+    abbonamento:document.getElementById('f_abbonamento').value,
+    importoAbbonamento:Number(document.getElementById('f_importo_abb').value),
     dataIscrizione: id ? state.iscritti.find(i=>i.id===id)?.dataIscrizione : today()
   };
   await saveDoc('iscritti', d);
@@ -1426,7 +1438,38 @@ function bindEvents() {
 
   // Confirm pagamento
   document.querySelectorAll('[data-pag-confirm]').forEach(el =>
-    el.onclick = async () => { const p = state.pagamenti.find(x=>x.id===Number(el.dataset.pagConfirm)); if(p) await saveDoc('pagamenti', {...p, stato:'Pagato'}); });
+    el.onclick = async () => {
+      const p = state.pagamenti.find(x=>x.id===Number(el.dataset.pagConfirm));
+      if(!p) return;
+      // Segna come pagato
+      await saveDoc('pagamenti', {...p, stato:'Pagato'});
+      // Crea automaticamente il prossimo pagamento se ha abbonamento
+      const iscritto = state.iscritti.find(i=>i.id===p.iscrittoId);
+      const abbonamento = iscritto?.abbonamento;
+      const importo = iscritto?.importoAbbonamento;
+      if(!abbonamento || abbonamento==='Nessuno' || !importo) return;
+      // Calcola data prossimo pagamento
+      const dataAttuale = new Date(p.data+'T12:00:00');
+      let dataProssima = new Date(dataAttuale);
+      if(abbonamento==='Mensile') dataProssima.setMonth(dataProssima.getMonth()+1);
+      else if(abbonamento==='Trimestrale') dataProssima.setMonth(dataProssima.getMonth()+3);
+      else if(abbonamento==='Annuale') dataProssima.setFullYear(dataProssima.getFullYear()+1);
+      const dataStr = dataProssima.toISOString().split('T')[0];
+      // Controlla che non esista già
+      const esiste = state.pagamenti.some(x=>x.iscrittoId===p.iscrittoId && x.data===dataStr && x.stato==='In attesa');
+      if(esiste) return;
+      // Crea nuovo pagamento in attesa
+      await saveDoc('pagamenti', {
+        id: Date.now(),
+        iscrittoId: p.iscrittoId,
+        importo: Number(importo),
+        tipo: abbonamento,
+        data: dataStr,
+        metodo: p.metodo,
+        stato: 'In attesa',
+        note: 'Rinnovo automatico'
+      });
+    });
 
   // Edit pagamento
   document.querySelectorAll('[data-edit-pag]').forEach(el =>
